@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/room_provider.dart';
 import '../../providers/expense_provider.dart';
+import '../../models/expense.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'room_setup_screen.dart';
@@ -19,6 +21,7 @@ class OwnerHomeScreen extends StatefulWidget {
 }
 
 class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
+  // Figma order: Home(0), Expenses(1), Members(2), Summary(3)
   int _tab = 0;
 
   @override
@@ -38,7 +41,6 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final room = context.watch<RoomProvider>().room;
-    final user = context.watch<AuthProvider>().user;
 
     if (room == null && !context.watch<RoomProvider>().loading) {
       return const RoomSetupScreen();
@@ -49,78 +51,134 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
     }
 
     final tabs = [
-      _DashboardTab(
-        room: room,
-        user: user,
-        onGoToMembers: () => setState(() => _tab = 1),
-        onGoToExpenses: () => setState(() => _tab = 2),
-        onGoToSummary: () => setState(() => _tab = 3),
-      ),
+      _DashboardTab(onGoToExpenses: () => setState(() => _tab = 1)),
+      ExpensesScreen(onGoBack: null),
       const MembersScreen(),
-      const ExpensesScreen(),
       const SummaryScreen(),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(room.name),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.receipt_long),
-            tooltip: 'Monthly Bills',
-            onPressed: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const MonthlyBillsScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
-          ),
-        ],
-      ),
+      backgroundColor: AppTheme.navy,
       body: tabs[_tab],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.people_outline), selectedIcon: Icon(Icons.people), label: 'Members'),
-          NavigationDestination(icon: Icon(Icons.receipt_outlined), selectedIcon: Icon(Icons.receipt), label: 'Expenses'),
-          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Summary'),
-        ],
+      bottomNavigationBar: _BottomNav(
+        currentIndex: _tab,
+        onTap: (i) => setState(() => _tab = i),
       ),
     );
   }
 }
 
-class _DashboardTab extends StatelessWidget {
-  final dynamic room;
-  final dynamic user;
-  final VoidCallback? onGoToMembers;
-  final VoidCallback? onGoToExpenses;
-  final VoidCallback? onGoToSummary;
+// ─── Bottom Navigation ───────────────────────────────────────────────────────
 
-  const _DashboardTab({
-    this.room,
-    this.user,
-    this.onGoToMembers,
-    this.onGoToExpenses,
-    this.onGoToSummary,
+class _BottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _BottomNav({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 16,
+              offset: const Offset(0, -2)),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Home', index: 0, currentIndex: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Expenses', index: 1, currentIndex: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Members', index: 2, currentIndex: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.pie_chart_outline, activeIcon: Icons.pie_chart, label: 'Summary', index: 3, currentIndex: currentIndex, onTap: onTap),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final int index;
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.index,
+    required this.currentIndex,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final expenses = context.watch<ExpenseProvider>().expenses;
-    final summary = context.watch<RoomProvider>().summary;
-    final pendingCount = expenses.where((e) => e.isPending).length;
-    final totalContributions = expenses
-        .where((e) => e.isApproved)
-        .fold(0.0, (sum, e) => sum + e.amount);
+    final isActive = index == currentIndex;
+    return GestureDetector(
+      onTap: () => onTap(index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 70,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
+              color: isActive ? AppTheme.navy : AppTheme.textSecondary,
+              size: 22,
+            ),
+            const SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? AppTheme.navy : AppTheme.textSecondary,
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-    final bills = room?.monthlyBills;
-    // +1 to include the owner in the split
-    final memberCount = ((room?.members.length ?? 0) as int) + 1;
-    final foodOptOutCount = (room?.foodOptOut.length ?? 0) as int;
-    final foodEaters = memberCount - foodOptOutCount;
+// ─── Dashboard Tab ────────────────────────────────────────────────────────────
+
+class _DashboardTab extends StatelessWidget {
+  final VoidCallback onGoToExpenses;
+
+  const _DashboardTab({required this.onGoToExpenses});
+
+  String _fmtAmount(double n) {
+    if (n >= 1000) return '₹${(n / 1000).toStringAsFixed(1)}k';
+    return '₹${n.toStringAsFixed(0)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final room = context.watch<RoomProvider>().room!;
+    final user = context.watch<AuthProvider>().user;
+    final expenses = context.watch<ExpenseProvider>().expenses;
+    final pendingCount = expenses.where((e) => e.isPending).length;
+    final totalExpenses = expenses
+        .where((e) => e.isApproved)
+        .fold(0.0, (s, e) => s + e.amount);
+    final memberCount = room.members.length + 1;
+    final recentExpenses = expenses.take(3).toList();
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -130,243 +188,195 @@ class _DashboardTab extends StatelessWidget {
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome banner
+            // ── Dark Header ──────────────────────────────────────────
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.navy, AppTheme.navyLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Hello, ${user?.name ?? ''}!',
-                      style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                  const SizedBox(height: 4),
-                  const Text('Room Overview',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.meeting_room, color: Colors.white54, size: 16),
-                      const SizedBox(width: 6),
-                      Text('Code: ${room?.roomCode ?? ''}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                      const Spacer(),
-                      if (room?.billingMonth.isNotEmpty == true)
-                        Row(
+              color: AppTheme.navy,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    // Room name row
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppTheme.teal,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.home, color: Colors.white, size: 24),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                room.name,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '$memberCount Members',
+                                style: const TextStyle(
+                                    color: AppTheme.teal, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Stack(
+                          clipBehavior: Clip.none,
                           children: [
-                            const Icon(Icons.calendar_today, color: Colors.white54, size: 14),
-                            const SizedBox(width: 4),
-                            Text(room!.billingMonth,
-                                style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                            const Icon(Icons.notifications_outlined,
+                                color: Colors.white, size: 26),
+                            if (pendingCount > 0)
+                              Positioned(
+                                top: -1,
+                                right: -1,
+                                child: Container(
+                                  width: 9,
+                                  height: 9,
+                                  decoration: const BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle),
+                                ),
+                              ),
                           ],
                         ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Pending alert
-            if (pendingCount > 0)
-              GestureDetector(
-                onTap: onGoToExpenses,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warning.withOpacity(0.1),
-                    border: Border.all(color: AppTheme.warning.withOpacity(0.4)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.pending_actions, color: AppTheme.warning),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '$pendingCount expense${pendingCount > 1 ? 's' : ''} waiting for your approval',
-                          style: const TextStyle(
-                              color: AppTheme.warning, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const Icon(Icons.arrow_forward_ios,
-                          color: AppTheme.warning, size: 14),
-                    ],
-                  ),
-                ),
-              ),
-
-            // Stats grid
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.5,
-              children: [
-                InfoCard(
-                  label: 'Members',
-                  value: '$memberCount',
-                  icon: Icons.people,
-                  color: AppTheme.navy,
-                ),
-                InfoCard(
-                  label: 'Pending',
-                  value: '$pendingCount',
-                  icon: Icons.pending_actions,
-                  color: AppTheme.warning,
-                ),
-                InfoCard(
-                  label: 'Total Bills',
-                  value: '₹${bills?.total.toStringAsFixed(0) ?? '0'}',
-                  icon: Icons.account_balance_wallet,
-                  color: AppTheme.teal,
-                ),
-                InfoCard(
-                  label: 'Contributions',
-                  value: '₹${totalContributions.toStringAsFixed(0)}',
-                  icon: Icons.trending_up,
-                  color: AppTheme.success,
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Monthly bills breakdown
-            if (bills != null && bills.total > 0) ...[
-              const SectionHeader(title: 'Monthly Bills'),
-              const SizedBox(height: 10),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      if (bills.rent > 0)
-                        _BillRow(Icons.home_outlined, 'Rent',
-                            bills.rent, memberCount, memberCount),
-                      if (bills.food > 0)
-                        _BillRow(Icons.restaurant_outlined, 'Food',
-                            bills.food, memberCount, foodEaters > 0 ? foodEaters : memberCount),
-                      if (bills.electricity > 0)
-                        _BillRow(Icons.bolt_outlined, 'Electricity',
-                            bills.electricity, memberCount, memberCount),
-                      if (bills.water > 0)
-                        _BillRow(Icons.water_drop_outlined, 'Water',
-                            bills.water, memberCount, memberCount),
-                      const Divider(),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Total Monthly',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('₹${bills.total.toStringAsFixed(0)}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.teal,
-                                  fontSize: 16)),
-                        ],
-                      ),
-                      if (memberCount > 0) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Per Person (avg)',
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                            Text(
-                              '≈ ₹${(bills.total / memberCount).toStringAsFixed(0)} (incl. owner)',
-                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Member Contributions',
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                            Text(
-                              '₹${totalContributions.toStringAsFixed(0)}',
-                              style: const TextStyle(color: AppTheme.success, fontSize: 13),
-                            ),
+                        const SizedBox(width: 12),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert,
+                              color: Colors.white, size: 22),
+                          onSelected: (v) {
+                            if (v == 'bills') {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) =>
+                                          const MonthlyBillsScreen()));
+                            } else if (v == 'logout') {
+                              context.read<AuthProvider>().logout();
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'bills', child: Text('Monthly Bills')),
+                            PopupMenuItem(value: 'logout', child: Text('Logout')),
                           ],
                         ),
                       ],
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 24),
+                    // Stat cards row
+                    Row(
+                      children: [
+                        Expanded(child: _StatCard(
+                          icon: Icons.attach_money,
+                          iconColor: AppTheme.teal,
+                          value: _fmtAmount(totalExpenses),
+                          label: 'This Month',
+                        )),
+                        const SizedBox(width: 10),
+                        Expanded(child: _StatCard(
+                          icon: Icons.access_time_outlined,
+                          iconColor: AppTheme.warning,
+                          value: '$pendingCount',
+                          label: 'Pending',
+                        )),
+                        const SizedBox(width: 10),
+                        Expanded(child: _StatCard(
+                          icon: Icons.people_outline,
+                          iconColor: AppTheme.teal,
+                          value: '$memberCount',
+                          label: 'Members',
+                        )),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
+            ),
 
-            // Member balances
-            if (summary != null) ...[
-              const SectionHeader(title: 'Member Balances'),
-              const SizedBox(height: 10),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
+            // ── White Body ───────────────────────────────────────────
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Summary cards row
+                  Row(
                     children: [
-                      for (final m in (summary['memberSummary'] as List? ?? []))
-                        _MemberBalanceRow(data: m),
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.attach_money,
+                          iconBg: const Color(0xFFF44336),
+                          title: 'Total Expenses',
+                          value: '₹${totalExpenses.toStringAsFixed(0)}',
+                          subtitle: expenses.isNotEmpty
+                              ? '${expenses.where((e) => e.isApproved).length} transactions'
+                              : 'No expenses yet',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _SummaryCard(
+                          icon: Icons.access_time_outlined,
+                          iconBg: AppTheme.warning,
+                          title: 'Pending\nApprovals',
+                          value: '$pendingCount',
+                          subtitle: null,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
+                  const SizedBox(height: 24),
 
-            // Quick actions
-            const SectionHeader(title: 'Quick Actions'),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 2.5,
-              children: [
-                _QuickAction(
-                  icon: Icons.receipt_long,
-                  label: 'Monthly Bills',
-                  onTap: () => Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const MonthlyBillsScreen())),
-                ),
-                _QuickAction(
-                  icon: Icons.people,
-                  label: 'Manage Members',
-                  onTap: onGoToMembers ?? () {},
-                ),
-                _QuickAction(
-                  icon: Icons.pending_actions,
-                  label: 'Approve Expenses',
-                  badge: pendingCount > 0 ? '$pendingCount' : null,
-                  onTap: onGoToExpenses ?? () {},
-                ),
-                _QuickAction(
-                  icon: Icons.bar_chart,
-                  label: 'View Summary',
-                  onTap: onGoToSummary ?? () {},
-                ),
-              ],
+                  // Recent Expenses header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Recent Expenses',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary),
+                      ),
+                      GestureDetector(
+                        onTap: onGoToExpenses,
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                              color: AppTheme.teal,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (expenses.isEmpty)
+                    _EmptyState(
+                      icon: Icons.receipt_long,
+                      message: 'No expenses yet',
+                    )
+                  else
+                    ...recentExpenses.map((e) => _ExpenseCard(expense: e)),
+                ],
+              ),
             ),
           ],
         ),
@@ -375,162 +385,263 @@ class _DashboardTab extends StatelessWidget {
   }
 }
 
-class _BillRow extends StatelessWidget {
+// ─── Stat Card (header) ───────────────────────────────────────────────────────
+
+class _StatCard extends StatelessWidget {
   final IconData icon;
+  final Color iconColor;
+  final String value;
   final String label;
-  final double amount;
-  final int totalMembers;
-  final int divisor;
 
-  const _BillRow(this.icon, this.label, this.amount, this.totalMembers, this.divisor);
-
-  @override
-  Widget build(BuildContext context) {
-    final perPerson = divisor > 0 ? amount / divisor : 0.0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: AppTheme.textSecondary),
-          const SizedBox(width: 10),
-          Expanded(child: Text(label)),
-          Text('₹${amount.toStringAsFixed(0)}',
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(width: 8),
-          Text('(₹${perPerson.toStringAsFixed(0)}/person)',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-}
-
-class _MemberBalanceRow extends StatelessWidget {
-  final Map<String, dynamic> data;
-  const _MemberBalanceRow({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = data['name'] ?? '';
-    final balance = (data['balance'] ?? 0).toDouble();
-    final isPaid = data['isPaid'] ?? false;
-    final isFoodOptOut = !(data['eatsFood'] ?? true);
-
-    return ListTile(
-      dense: true,
-      leading: CircleAvatar(
-        radius: 16,
-        backgroundColor: AppTheme.teal.withOpacity(0.15),
-        child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-            style: const TextStyle(color: AppTheme.teal, fontWeight: FontWeight.bold, fontSize: 12)),
-      ),
-      title: Row(
-        children: [
-          Text(name, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-          if (isFoodOptOut) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-              decoration: BoxDecoration(
-                color: AppTheme.error.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const Text('No Food',
-                  style: TextStyle(color: AppTheme.error, fontSize: 9)),
-            ),
-          ],
-        ],
-      ),
-      trailing: isPaid
-          ? const _StatusPill('PAID', AppTheme.success)
-          : balance > 0
-              ? _StatusPill('Pay ₹${balance.toStringAsFixed(0)}', AppTheme.error)
-              : balance < 0
-                  ? _StatusPill('Get ₹${balance.abs().toStringAsFixed(0)}', AppTheme.teal)
-                  : const _StatusPill('Settled', AppTheme.textSecondary),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _StatusPill(this.label, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(label,
-          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final String? badge;
-
-  const _QuickAction({
+  const _StatCard({
     required this.icon,
+    required this.iconColor,
+    required this.value,
     required this.label,
-    required this.onTap,
-    this.badge,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2))
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              children: [
-                Icon(icon, color: AppTheme.navy, size: 20),
-                if (badge != null)
-                  Positioned(
-                    top: -2,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: const BoxDecoration(
-                          color: AppTheme.error, shape: BoxShape.circle),
-                      child: Text(badge!,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(label,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF243560),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Summary Card (white body) ────────────────────────────────────────────────
+
+class _SummaryCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconBg;
+  final String title;
+  final String value;
+  final String? subtitle;
+
+  const _SummaryCard({
+    required this.icon,
+    required this.iconBg,
+    required this.title,
+    required this.value,
+    this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
                   style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13,
-                      color: AppTheme.textPrimary),
-                  overflow: TextOverflow.ellipsis),
+                      color: AppTheme.textSecondary,
+                      fontSize: 13),
+                ),
+              ),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                    color: iconBg, borderRadius: BorderRadius.circular(10)),
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (subtitle != null) ...[
+            Text(
+              subtitle!,
+              style: const TextStyle(
+                  color: AppTheme.textSecondary, fontSize: 11),
             ),
+            const SizedBox(height: 4),
+          ],
+          Text(
+            value,
+            style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 22,
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Expense Card ─────────────────────────────────────────────────────────────
+
+class _ExpenseCard extends StatelessWidget {
+  final Expense expense;
+
+  const _ExpenseCard({required this.expense});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateFmt = DateFormat('MMM d');
+    final isPending = expense.isPending;
+    final isApproved = expense.isApproved;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  expense.shopName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppTheme.textPrimary),
+                ),
+              ),
+              Text(
+                '₹${expense.amount.toStringAsFixed(0)}',
+                style: const TextStyle(
+                    color: Color(0xFFE53935),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.person_outline,
+                  size: 13, color: AppTheme.textSecondary),
+              const SizedBox(width: 4),
+              Text(
+                'Paid by ${expense.memberName}',
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              if (expense.comments != null && expense.comments!.isNotEmpty) ...[
+                const Text(
+                  ' · ',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                Text(
+                  expense.comments!,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12),
+                ),
+              ],
+              const Spacer(),
+              Text(
+                dateFmt.format(expense.date),
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          const SizedBox(height: 10),
+          _StatusBadge(status: expense.status),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    if (status == 'approved') {
+      color = AppTheme.success;
+    } else if (status == 'rejected') {
+      color = AppTheme.error;
+    } else {
+      color = AppTheme.warning;
+    }
+    final label = status[0].toUpperCase() + status.substring(1);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+            color: color, fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  const _EmptyState({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            Icon(icon, size: 52, color: Colors.grey.shade300),
+            const SizedBox(height: 12),
+            Text(message,
+                style: const TextStyle(color: AppTheme.textSecondary)),
           ],
         ),
       ),

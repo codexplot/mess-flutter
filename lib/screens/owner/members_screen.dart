@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/room_provider.dart';
 import '../../providers/expense_provider.dart';
@@ -7,8 +6,28 @@ import '../../models/room.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 
-class MembersScreen extends StatelessWidget {
+class MembersScreen extends StatefulWidget {
   const MembersScreen({super.key});
+
+  @override
+  State<MembersScreen> createState() => _MembersScreenState();
+}
+
+class _MembersScreenState extends State<MembersScreen> {
+  final _searchCtrl = TextEditingController();
+  String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl.addListener(() => setState(() => _search = _searchCtrl.text));
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   void _showAddMember(BuildContext context) {
     final ctrl = TextEditingController();
@@ -28,7 +47,8 @@ class MembersScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text('Add Member',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: ctrl,
@@ -43,15 +63,20 @@ class MembersScreen extends StatelessWidget {
                   loading: loading,
                   onPressed: () async {
                     setS(() => loading = true);
-                    final ok =
-                        await context.read<RoomProvider>().addMember(ctrl.text.trim());
+                    final ok = await context
+                        .read<RoomProvider>()
+                        .addMember(ctrl.text.trim());
                     setS(() => loading = false);
-                    Navigator.pop(ctx);
-                    showSnack(
-                      context,
-                      ok ? 'Member added!' : (context.read<RoomProvider>().error ?? 'Failed'),
-                      error: !ok,
-                    );
+                    if (context.mounted) Navigator.pop(ctx);
+                    if (context.mounted) {
+                      showSnack(
+                        context,
+                        ok
+                            ? 'Member added!'
+                            : (context.read<RoomProvider>().error ?? 'Failed'),
+                        error: !ok,
+                      );
+                    }
                   },
                   label: 'Add Member',
                 ),
@@ -69,7 +94,7 @@ class MembersScreen extends StatelessWidget {
     final room = roomProv.room;
     final summary = roomProv.summary;
 
-    // Build a map of member balances from summary
+    // Build balance map from summary
     final balanceMap = <String, Map<String, dynamic>>{};
     if (summary != null) {
       for (final m in (summary['memberSummary'] as List? ?? [])) {
@@ -77,96 +102,212 @@ class MembersScreen extends StatelessWidget {
       }
     }
 
+    // Compute totals
+    double totalOwed = 0;
+    double toReceive = 0;
+    for (final data in balanceMap.values) {
+      final b = (data['balance'] ?? 0).toDouble();
+      if (b > 0) totalOwed += b;
+      if (b < 0) toReceive += b.abs();
+    }
+
+    final members = room?.members ?? [];
+    final filtered = _search.isEmpty
+        ? members
+        : members
+            .where((m) =>
+                m.name.toLowerCase().contains(_search.toLowerCase()) ||
+                m.email.toLowerCase().contains(_search.toLowerCase()))
+            .toList();
+
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddMember(context),
-        icon: const Icon(Icons.person_add),
-        label: const Text('Add Member'),
-        backgroundColor: AppTheme.teal,
-        foregroundColor: Colors.white,
-      ),
-      body: room == null
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => roomProv.fetchRoom(),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Room code card
-                    Card(
-                      color: AppTheme.navy,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.meeting_room, color: Colors.white70),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Room Code',
-                                    style: TextStyle(
-                                        color: Colors.white70, fontSize: 12)),
-                                Text(room.roomCode,
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 3)),
-                              ],
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.copy, color: Colors.white70),
-                              onPressed: () {
-                                Clipboard.setData(
-                                    ClipboardData(text: room.roomCode));
-                                showSnack(context, 'Room code copied!');
-                              },
-                            ),
-                          ],
+      backgroundColor: AppTheme.navy,
+      body: Column(
+        children: [
+          // ── Dark Header ──────────────────────────────────────────────
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                children: [
+                  // Title row
+                  Row(
+                    children: [
+                      const Text(
+                        'Members',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => _showAddMember(context),
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppTheme.teal,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.person_add_outlined,
+                              color: Colors.white, size: 20),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    SectionHeader(title: 'Members (${room.members.length})'),
-                    const SizedBox(height: 12),
-                    if (room.members.isEmpty)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(40),
-                          child: Text(
-                              'No members yet.\nShare the room code to invite.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: AppTheme.textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Total Owed / To Receive
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatCard(
+                          label: 'Total Owed',
+                          value:
+                              '₹${totalOwed.toStringAsFixed(0)}',
                         ),
-                      )
-                    else
-                      ...room.members.map((m) => _MemberCard(
-                            member: m,
-                            room: room,
-                            balanceData: balanceMap[m.id],
-                          )),
-                  ],
-                ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatCard(
+                          label: 'To Receive',
+                          value:
+                              '₹${toReceive.toStringAsFixed(0)}',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  // Search bar
+                  Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF243560),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: const InputDecoration(
+                        hintText: 'Search members...',
+                        hintStyle:
+                            TextStyle(color: Colors.white38, fontSize: 14),
+                        prefixIcon: Icon(Icons.search,
+                            color: Colors.white38, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
+
+          // ── White Body ───────────────────────────────────────────────
+          Expanded(
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: room == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                      onRefresh: () => roomProv.fetchRoom(),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding:
+                            const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                        children: [
+                          if (members.isNotEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(left: 4, bottom: 10),
+                              child: Text(
+                                '${members.length} Members',
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 13),
+                              ),
+                            ),
+                          if (filtered.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40),
+                              child: Center(
+                                child: Text(
+                                  'No members found',
+                                  style:
+                                      TextStyle(color: AppTheme.textSecondary),
+                                ),
+                              ),
+                            )
+                          else
+                            ...filtered.map((m) => _MemberCard(
+                                  member: m,
+                                  room: room,
+                                  balanceData: balanceMap[m.id],
+                                  isFirst: filtered.indexOf(m) == 0,
+                                )),
+                        ],
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  const _StatCard({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF243560),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style:
+                  const TextStyle(color: Colors.white60, fontSize: 12)),
+          const SizedBox(height: 6),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Member Card ──────────────────────────────────────────────────────────────
 
 class _MemberCard extends StatefulWidget {
   final RoomMember member;
   final Room room;
   final Map<String, dynamic>? balanceData;
+  final bool isFirst;
 
   const _MemberCard({
     required this.member,
     required this.room,
     this.balanceData,
+    this.isFirst = false,
   });
 
   @override
@@ -218,15 +359,95 @@ class _MemberCardState extends State<_MemberCard> {
       if (ok) context.read<RoomProvider>().fetchSummary();
       showSnack(
         context,
-        ok ? 'Contribution added!' : (context.read<ExpenseProvider>().error ?? 'Failed'),
+        ok
+            ? 'Contribution added!'
+            : (context.read<ExpenseProvider>().error ?? 'Failed'),
         error: !ok,
       );
     }
   }
 
+  void _showActions(BuildContext context) {
+    final roomProv = context.read<RoomProvider>();
+    final m = widget.member;
+    final room = widget.room;
+    final isPaid = room.paidMembers.contains(m.id);
+    final isFoodOptOut = room.foodOptOut.contains(m.id);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(m.name,
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            _ActionRow(
+              icon: isPaid ? Icons.check_circle : Icons.check_circle_outline,
+              label: isPaid ? 'Mark Unpaid' : 'Mark Paid',
+              color: AppTheme.success,
+              onTap: () {
+                Navigator.pop(context);
+                roomProv.togglePaid(m.id);
+              },
+            ),
+            _ActionRow(
+              icon: Icons.restaurant,
+              label: isFoodOptOut ? 'Add Food' : 'No Food',
+              color: isFoodOptOut ? AppTheme.success : AppTheme.error,
+              onTap: () {
+                Navigator.pop(context);
+                roomProv.toggleFood(m.id);
+              },
+            ),
+            _ActionRow(
+              icon: Icons.add_circle_outline,
+              label: 'Add Contribution',
+              color: AppTheme.teal,
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _showContrib = !_showContrib);
+              },
+            ),
+            _ActionRow(
+              icon: Icons.receipt_long_outlined,
+              label: 'Bill Breakdown',
+              color: AppTheme.navy,
+              onTap: () {
+                Navigator.pop(context);
+                setState(() => _showBreakdown = !_showBreakdown);
+              },
+            ),
+            _ActionRow(
+              icon: Icons.person_remove_outlined,
+              label: 'Remove Member',
+              color: AppTheme.error,
+              onTap: () async {
+                Navigator.pop(context);
+                final ok = await roomProv.removeMember(m.id);
+                if (context.mounted) {
+                  showSnack(
+                    context,
+                    ok ? 'Member removed' : (roomProv.error ?? 'Failed'),
+                    error: !ok,
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final roomProv = context.read<RoomProvider>();
     final m = widget.member;
     final room = widget.room;
     final isPaid = room.paidMembers.contains(m.id);
@@ -237,156 +458,134 @@ class _MemberCardState extends State<_MemberCard> {
     final contribution = (balance?['contribution'] ?? 0).toDouble();
 
     final bills = room.monthlyBills;
-    // +1 to include the owner in the split
     final memberCount = room.members.length + 1;
     final foodOptOutCount = room.foodOptOut.length;
     final foodEaters = memberCount - foodOptOutCount;
 
-    return Card(
+    // Status text + color
+    String statusLabel;
+    Color statusColor;
+    if (isPaid) {
+      statusLabel = 'Paid';
+      statusColor = AppTheme.success;
+    } else if (balanceAmt > 0) {
+      statusLabel = 'Owes ₹${balanceAmt.toStringAsFixed(0)}';
+      statusColor = AppTheme.error;
+    } else if (balanceAmt < 0) {
+      statusLabel = 'Gets back ₹${balanceAmt.abs().toStringAsFixed(0)}';
+      statusColor = AppTheme.success;
+    } else {
+      statusLabel = 'Settled';
+      statusColor = AppTheme.textSecondary;
+    }
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
       child: Column(
         children: [
-          // Header row
+          // Main row
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+            padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppTheme.teal.withOpacity(0.15),
-                  child: Text(m.name[0].toUpperCase(),
+                // Avatar
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.navy,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      m.name.isNotEmpty ? m.name[0].toUpperCase() : '?',
                       style: const TextStyle(
-                          color: AppTheme.teal, fontWeight: FontWeight.bold)),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
+                // Name + status
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(m.name,
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                      Text(m.email,
-                          style: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12)),
+                      Row(
+                        children: [
+                          Text(
+                            m.name,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: AppTheme.textPrimary),
+                          ),
+                          if (widget.isFirst) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.teal.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'Owner',
+                                style: TextStyle(
+                                    color: AppTheme.teal,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                          if (isFoodOptOut) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.error.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text(
+                                'No Food',
+                                style: TextStyle(
+                                    color: AppTheme.error, fontSize: 10),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        statusLabel,
+                        style: TextStyle(
+                            color: statusColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 ),
-                // Status badges
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (isFoodOptOut)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
-                          color: AppTheme.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text('No Food',
-                            style: TextStyle(color: AppTheme.error, fontSize: 10)),
-                      ),
-                    isPaid
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppTheme.success.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text('PAID',
-                                style: TextStyle(
-                                    color: AppTheme.success,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold)),
-                          )
-                        : balanceAmt > 0
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.error.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text('Pay ₹${balanceAmt.toStringAsFixed(0)}',
-                                    style: const TextStyle(
-                                        color: AppTheme.error,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold)),
-                              )
-                            : balanceAmt < 0
-                                ? Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.teal.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text('Get ₹${balanceAmt.abs().toStringAsFixed(0)}',
-                                        style: const TextStyle(
-                                            color: AppTheme.teal,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold)),
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.textSecondary.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text('Settled',
-                                        style: TextStyle(
-                                            color: AppTheme.textSecondary,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold)),
-                                  ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Action buttons row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-            child: Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _ActionChip(
-                  label: isPaid ? 'Paid ✓' : 'Mark Paid',
-                  icon: isPaid ? Icons.check_circle : Icons.check_circle_outline,
-                  color: isPaid ? AppTheme.success : AppTheme.textSecondary,
-                  onTap: () => roomProv.togglePaid(m.id),
-                ),
-                _ActionChip(
-                  label: isFoodOptOut ? 'Add Food' : 'No Food',
-                  icon: Icons.restaurant,
-                  color: isFoodOptOut ? AppTheme.success : AppTheme.error,
-                  onTap: () => roomProv.toggleFood(m.id),
-                ),
-                _ActionChip(
-                  label: 'Add Contribution',
-                  icon: Icons.add_circle_outline,
-                  color: AppTheme.teal,
-                  onTap: () => setState(() => _showContrib = !_showContrib),
-                ),
-                _ActionChip(
-                  label: 'Bill Breakdown',
-                  icon: Icons.expand_more,
-                  color: AppTheme.navy,
-                  onTap: () => setState(() => _showBreakdown = !_showBreakdown),
-                ),
-                _ActionChip(
-                  label: 'Remove',
-                  icon: Icons.person_remove_outlined,
-                  color: AppTheme.error,
-                  onTap: () async {
-                    final ok = await roomProv.removeMember(m.id);
-                    if (context.mounted) {
-                      showSnack(
-                        context,
-                        ok ? 'Member removed' : (roomProv.error ?? 'Failed'),
-                        error: !ok,
-                      );
-                    }
-                  },
+                // Three-dot menu
+                GestureDetector(
+                  onTap: () => _showActions(context),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.more_vert,
+                        color: AppTheme.textSecondary, size: 20),
+                  ),
                 ),
               ],
             ),
@@ -418,7 +617,8 @@ class _MemberCardState extends State<_MemberCard> {
                           decoration: const InputDecoration(
                             labelText: 'Amount (₹)',
                             isDense: true,
-                            prefixIcon: Icon(Icons.currency_rupee, size: 16),
+                            prefixIcon:
+                                Icon(Icons.currency_rupee, size: 16),
                           ),
                         ),
                       ),
@@ -440,11 +640,11 @@ class _MemberCardState extends State<_MemberCard> {
                     decoration: const InputDecoration(
                       labelText: 'Notes (optional)',
                       isDense: true,
-                      prefixIcon: Icon(Icons.comment_outlined, size: 16),
+                      prefixIcon:
+                          Icon(Icons.comment_outlined, size: 16),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Date selector
                   GestureDetector(
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -465,10 +665,10 @@ class _MemberCardState extends State<_MemberCard> {
                           style: const TextStyle(
                               color: AppTheme.textSecondary, fontSize: 13),
                         ),
-                        const SizedBox(width: 6),
-                        const Text('(tap to change)',
+                        const Text(' (tap to change)',
                             style: TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 11)),
+                                color: AppTheme.textSecondary,
+                                fontSize: 11)),
                       ],
                     ),
                   ),
@@ -477,7 +677,8 @@ class _MemberCardState extends State<_MemberCard> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => setState(() => _showContrib = false),
+                          onPressed: () =>
+                              setState(() => _showContrib = false),
                           child: const Text('Cancel'),
                         ),
                       ),
@@ -508,9 +709,21 @@ class _MemberCardState extends State<_MemberCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Bill Breakdown',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, color: AppTheme.navy)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Bill Breakdown',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.navy)),
+                      GestureDetector(
+                        onTap: () =>
+                            setState(() => _showBreakdown = false),
+                        child: const Icon(Icons.close,
+                            size: 16, color: AppTheme.textSecondary),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   if (bills.rent > 0)
                     _BreakdownRow('Rent',
@@ -518,23 +731,34 @@ class _MemberCardState extends State<_MemberCard> {
                         '÷ $memberCount'),
                   if (bills.food > 0)
                     isFoodOptOut
-                        ? const _BreakdownRow('Food', 0, 'opted out', optOut: true)
+                        ? const _BreakdownRow('Food', 0, 'opted out',
+                            optOut: true)
                         : _BreakdownRow(
                             'Food',
-                            foodEaters > 0 ? bills.food / foodEaters : 0,
+                            foodEaters > 0
+                                ? bills.food / foodEaters
+                                : 0,
                             '÷ $foodEaters'),
                   if (bills.electricity > 0)
-                    _BreakdownRow('Electricity',
-                        memberCount > 0 ? bills.electricity / memberCount : 0,
+                    _BreakdownRow(
+                        'Electricity',
+                        memberCount > 0
+                            ? bills.electricity / memberCount
+                            : 0,
                         '÷ $memberCount'),
                   if (bills.water > 0)
-                    _BreakdownRow('Water',
-                        memberCount > 0 ? bills.water / memberCount : 0,
+                    _BreakdownRow(
+                        'Water',
+                        memberCount > 0
+                            ? bills.water / memberCount
+                            : 0,
                         '÷ $memberCount'),
                   const Divider(height: 14),
-                  _SummaryRow('Their Share', '₹${share.toStringAsFixed(2)}',
+                  _SummaryRow('Their Share',
+                      '₹${share.toStringAsFixed(2)}',
                       bold: true),
-                  _SummaryRow('Contributions',
+                  _SummaryRow(
+                      'Contributions',
                       '- ₹${contribution.toStringAsFixed(2)}',
                       color: AppTheme.success),
                   _SummaryRow(
@@ -564,13 +788,61 @@ class _MemberCardState extends State<_MemberCard> {
   }
 }
 
+// ─── Action Row (bottom sheet) ────────────────────────────────────────────────
+
+class _ActionRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionRow({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 14),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Breakdown Row ────────────────────────────────────────────────────────────
+
 class _BreakdownRow extends StatelessWidget {
   final String label;
   final double amount;
   final String note;
   final bool optOut;
 
-  const _BreakdownRow(this.label, this.amount, this.note, {this.optOut = false});
+  const _BreakdownRow(this.label, this.amount, this.note,
+      {this.optOut = false});
 
   @override
   Widget build(BuildContext context) {
@@ -580,22 +852,28 @@ class _BreakdownRow extends StatelessWidget {
         children: [
           Expanded(
               child: Text(label,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13))),
           Text(note,
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              style: const TextStyle(
+                  color: AppTheme.textSecondary, fontSize: 11)),
           const SizedBox(width: 8),
           Text(
             optOut ? 'opted out' : '₹${amount.toStringAsFixed(0)}',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
-                color: optOut ? AppTheme.textSecondary : AppTheme.textPrimary),
+                color: optOut
+                    ? AppTheme.textSecondary
+                    : AppTheme.textPrimary),
           ),
         ],
       ),
     );
   }
 }
+
+// ─── Summary Row ──────────────────────────────────────────────────────────────
 
 class _SummaryRow extends StatelessWidget {
   final String label;
@@ -623,43 +901,6 @@ class _SummaryRow extends StatelessWidget {
                   color: color ?? AppTheme.textPrimary,
                   fontSize: 13)),
         ],
-      ),
-    );
-  }
-}
-
-class _ActionChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionChip({
-    required this.label,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.25)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 5),
-            Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
-          ],
-        ),
       ),
     );
   }

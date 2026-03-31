@@ -7,31 +7,31 @@ import '../../models/expense.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 
-
 class ExpensesScreen extends StatefulWidget {
-  final bool openAdd;
-  const ExpensesScreen({super.key, this.openAdd = false});
+  final VoidCallback? onGoBack;
+  const ExpensesScreen({super.key, this.onGoBack});
 
   @override
   State<ExpensesScreen> createState() => _ExpensesScreenState();
 }
 
-class _ExpensesScreenState extends State<ExpensesScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabCtrl;
+class _ExpensesScreenState extends State<ExpensesScreen> {
+  String? _filter; // null = All, 'pending', 'approved'
+  final _searchCtrl = TextEditingController();
+  String _search = '';
 
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 3, vsync: this);
+    _searchCtrl.addListener(() => setState(() => _search = _searchCtrl.text));
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.openAdd) _showAddExpense();
+      context.read<ExpenseProvider>().fetchExpenses();
     });
   }
 
   @override
   void dispose() {
-    _tabCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -69,8 +69,8 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                     initialValue: memberCtrl.value,
                     decoration: const InputDecoration(labelText: 'Member'),
                     items: room.members
-                        .map((m) => DropdownMenuItem(
-                            value: m.id, child: Text(m.name)))
+                        .map((m) =>
+                            DropdownMenuItem(value: m.id, child: Text(m.name)))
                         .toList(),
                     onChanged: (v) => memberCtrl.value = v,
                   ),
@@ -93,8 +93,8 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                   TextFormField(
                     controller: commentCtrl,
                     decoration: const InputDecoration(
-                        labelText: 'Comments (optional)',
-                        prefixIcon: Icon(Icons.comment_outlined)),
+                        labelText: 'Category / Comments (optional)',
+                        prefixIcon: Icon(Icons.label_outline)),
                   ),
                   const SizedBox(height: 20),
                   LoadingButton(
@@ -102,7 +102,8 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                     onPressed: () async {
                       final amt = double.tryParse(amountCtrl.text);
                       if (amt == null || shopCtrl.text.isEmpty) {
-                        showSnack(context, 'Fill all required fields', error: true);
+                        showSnack(context, 'Fill all required fields',
+                            error: true);
                         return;
                       }
                       setS(() => loading = true);
@@ -115,15 +116,20 @@ class _ExpensesScreenState extends State<ExpensesScreen>
                                 comments: commentCtrl.text.trim(),
                               );
                       setS(() => loading = false);
-                      if (ok) {
+                      if (ok && context.mounted) {
                         context.read<RoomProvider>().fetchSummary();
                       }
-                      Navigator.pop(ctx);
-                      showSnack(
-                        context,
-                        ok ? 'Expense added!' : (context.read<ExpenseProvider>().error ?? 'Failed'),
-                        error: !ok,
-                      );
+                      if (context.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        showSnack(
+                          context,
+                          ok
+                              ? 'Expense added!'
+                              : (context.read<ExpenseProvider>().error ??
+                                  'Failed'),
+                          error: !ok,
+                        );
+                      }
                     },
                     label: 'Add Expense',
                   ),
@@ -136,34 +142,140 @@ class _ExpensesScreenState extends State<ExpensesScreen>
     );
   }
 
+  List<Expense> _getList(ExpenseProvider prov) {
+    List<Expense> list;
+    if (_filter == 'pending') {
+      list = prov.pendingExpenses;
+    } else if (_filter == 'approved') {
+      list = prov.approvedExpenses;
+    } else {
+      list = prov.expenses;
+    }
+    if (_search.isNotEmpty) {
+      final q = _search.toLowerCase();
+      list = list
+          .where((e) =>
+              e.shopName.toLowerCase().contains(q) ||
+              e.memberName.toLowerCase().contains(q))
+          .toList();
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final expProv = context.watch<ExpenseProvider>();
+    final list = _getList(expProv);
+
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
+      backgroundColor: AppTheme.navy,
+      floatingActionButton: FloatingActionButton(
         onPressed: _showAddExpense,
-        icon: const Icon(Icons.add),
-        label: const Text('Add for Member'),
         backgroundColor: AppTheme.teal,
         foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
       body: Column(
         children: [
-          TabBar(
-            controller: _tabCtrl,
-            tabs: const [
-              Tab(text: 'Pending'),
-              Tab(text: 'Approved'),
-              Tab(text: 'All'),
-            ],
+          // ── Dark Header ──────────────────────────────────────────────
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                children: [
+                  // Title row
+                  Row(
+                    children: [
+                      const Text(
+                        'All Expenses',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Search bar
+                  Container(
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF243560),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: TextField(
+                      controller: _searchCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: const InputDecoration(
+                        hintText: 'Search expenses...',
+                        hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                        prefixIcon:
+                            Icon(Icons.search, color: Colors.white38, size: 20),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Filter chips row
+                  Row(
+                    children: [
+                      _FilterChip(
+                          label: 'All',
+                          isActive: _filter == null,
+                          onTap: () => setState(() => _filter = null)),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                          label: 'Pending',
+                          isActive: _filter == 'pending',
+                          onTap: () =>
+                              setState(() => _filter = 'pending')),
+                      const SizedBox(width: 8),
+                      _FilterChip(
+                          label: 'Approved',
+                          isActive: _filter == 'approved',
+                          onTap: () =>
+                              setState(() => _filter = 'approved')),
+                      const Spacer(),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF243560),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.tune,
+                            color: Colors.white70, size: 18),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
+
+          // ── White Body ───────────────────────────────────────────────
           Expanded(
-            child: TabBarView(
-              controller: _tabCtrl,
-              children: [
-                _ExpenseList(filter: 'pending'),
-                _ExpenseList(filter: 'approved'),
-                _ExpenseList(filter: null),
-              ],
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: expProv.loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : list.isEmpty
+                      ? _EmptyExpenses(filter: _filter, search: _search)
+                      : RefreshIndicator(
+                          onRefresh: () =>
+                              context.read<ExpenseProvider>().fetchExpenses(),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                            itemCount: list.length,
+                            itemBuilder: (_, i) =>
+                                _ExpenseTile(expense: list[i]),
+                          ),
+                        ),
             ),
           ),
         ],
@@ -172,51 +284,43 @@ class _ExpensesScreenState extends State<ExpensesScreen>
   }
 }
 
-class _ExpenseList extends StatelessWidget {
-  final String? filter;
+// ─── Filter Chip ──────────────────────────────────────────────────────────────
 
-  const _ExpenseList({this.filter});
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _FilterChip(
+      {required this.label,
+      required this.isActive,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final expProv = context.watch<ExpenseProvider>();
-    List<Expense> list;
-    if (filter == 'pending') {
-      list = expProv.pendingExpenses;
-    } else if (filter == 'approved') {
-      list = expProv.approvedExpenses;
-    } else {
-      list = expProv.expenses;
-    }
-
-    if (expProv.loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (list.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long, size: 60, color: Colors.grey.shade300),
-            const SizedBox(height: 12),
-            Text('No ${filter ?? ''} expenses',
-                style: const TextStyle(color: AppTheme.textSecondary)),
-          ],
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.teal : const Color(0xFF243560),
+          borderRadius: BorderRadius.circular(10),
         ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => context.read<ExpenseProvider>().fetchExpenses(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: list.length,
-        itemBuilder: (_, i) => _ExpenseTile(expense: list[i]),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? Colors.white : Colors.white70,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }
 }
+
+// ─── Expense Tile ─────────────────────────────────────────────────────────────
 
 class _ExpenseTile extends StatelessWidget {
   final Expense expense;
@@ -241,7 +345,8 @@ class _ExpenseTile extends StatelessWidget {
                   padding: const EdgeInsets.all(6),
                   decoration: const BoxDecoration(
                       color: Colors.black54, shape: BoxShape.circle),
-                  child: const Icon(Icons.close, color: Colors.white, size: 20),
+                  child:
+                      const Icon(Icons.close, color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -271,14 +376,17 @@ class _ExpenseTile extends StatelessWidget {
           decoration: const InputDecoration(hintText: 'Reason (optional)'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
             onPressed: () async {
               Navigator.pop(context);
               final ok = await context
                   .read<ExpenseProvider>()
-                  .updateStatus(expense.id, 'rejected', rejectionNote: ctrl.text);
+                  .updateStatus(expense.id, 'rejected',
+                      rejectionNote: ctrl.text);
               if (context.mounted) {
                 if (ok) context.read<RoomProvider>().fetchSummary();
                 showSnack(context, ok ? 'Rejected' : 'Failed', error: !ok);
@@ -293,93 +401,201 @@ class _ExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('dd MMM yyyy');
-    return Card(
+    final dateFmt = DateFormat('MMM d');
+
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(expense.shopName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 15)),
-                ),
-                StatusBadge(status: expense.status),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.person_outline,
-                    size: 14, color: AppTheme.textSecondary),
-                const SizedBox(width: 4),
-                Text(expense.memberName,
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 13)),
-                const Spacer(),
-                Text(fmt.format(expense.date),
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('₹${expense.amount.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.navy)),
-                if (expense.isPending)
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => _reject(context),
-                        style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-                        child: const Text('Reject'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () => _approve(context),
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.success,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                        child: const Text('Approve'),
-                      ),
-                    ],
-                  ),
-              ],
-            ),
-            if (expense.isRejected && expense.rejectionNote != null) ...[
-              const Divider(),
-              Text('Reason: ${expense.rejectionNote}',
-                  style: const TextStyle(color: AppTheme.error, fontSize: 12)),
-            ],
-            if (expense.billImage != null) ...[
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => _viewImage(context, expense.billImage!.url),
-                child: Row(
-                  children: [
-                    const Icon(Icons.image_outlined, size: 14, color: AppTheme.teal),
-                    const SizedBox(width: 6),
-                    const Text('View Bill Image',
-                        style: TextStyle(
-                            color: AppTheme.teal,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500)),
-                  ],
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title + Amount
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  expense.shopName,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: AppTheme.textPrimary),
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${expense.amount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                        color: Color(0xFFE53935),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                  ),
+                  Text(
+                    dateFmt.format(expense.date),
+                    style: const TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 11),
+                  ),
+                ],
+              ),
             ],
+          ),
+          const SizedBox(height: 4),
+          // Paid by
+          Row(
+            children: [
+              const Icon(Icons.person_outline,
+                  size: 13, color: AppTheme.textSecondary),
+              const SizedBox(width: 4),
+              Text(
+                'Paid by ${expense.memberName}',
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+              ),
+              if (expense.comments != null &&
+                  expense.comments!.isNotEmpty) ...[
+                const Text(' · ',
+                    style: TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 12)),
+                Text(
+                  expense.comments!,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFF0F0F0)),
+          const SizedBox(height: 10),
+          // Status badge + approve/reject
+          Row(
+            children: [
+              _StatusBadge(status: expense.status),
+              const Spacer(),
+              if (expense.isPending) ...[
+                TextButton(
+                  onPressed: () => _reject(context),
+                  style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.error,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  child: const Text('Reject', style: TextStyle(fontSize: 13)),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => _approve(context),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.success,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      textStyle: const TextStyle(fontSize: 13)),
+                  child: const Text('Approve'),
+                ),
+              ],
+            ],
+          ),
+          if (expense.isRejected && expense.rejectionNote != null) ...[
+            const SizedBox(height: 6),
+            Text('Reason: ${expense.rejectionNote}',
+                style: const TextStyle(
+                    color: AppTheme.error, fontSize: 12)),
           ],
-        ),
+          if (expense.billImage != null) ...[
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => _viewImage(context, expense.billImage!.url),
+              child: const Row(
+                children: [
+                  Icon(Icons.image_outlined, size: 14, color: AppTheme.teal),
+                  SizedBox(width: 6),
+                  Text('View Bill Image',
+                      style: TextStyle(
+                          color: AppTheme.teal,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
 }
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    if (status == 'approved') {
+      color = AppTheme.success;
+    } else if (status == 'rejected') {
+      color = AppTheme.error;
+    } else {
+      color = AppTheme.warning;
+    }
+    final label = status[0].toUpperCase() + status.substring(1);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+            color: color, fontSize: 12, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+class _EmptyExpenses extends StatelessWidget {
+  final String? filter;
+  final String search;
+  const _EmptyExpenses({this.filter, required this.search});
+
+  @override
+  Widget build(BuildContext context) {
+    final msg = search.isNotEmpty
+        ? 'No results for "$search"'
+        : 'No ${filter ?? ''} expenses';
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.receipt_long, size: 60, color: Colors.grey.shade300),
+          const SizedBox(height: 12),
+          Text(msg,
+              style: const TextStyle(color: AppTheme.textSecondary)),
+        ],
+      ),
+    );
+  }
+}
+
