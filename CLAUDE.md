@@ -58,8 +58,47 @@ flutter build ios     # Build iOS
 - **Member**: Joins rooms via room code, submits expenses, views personal summary
 - **Admin**: Separate admin home screen
 
+## UI Design
+
+Owner screens follow a Figma design with:
+- **Dark navy header** (`AppTheme.navy`) per screen — no global `AppBar`
+- **White/grey body** (`#F5F7FA`) with `BorderRadius.vertical(top: Radius.circular(24))` overlap
+- **Custom bottom nav** in `OwnerHomeScreen` (tab order: Home → Expenses → Members → Summary)
+- **Status badges**: outlined pill style with color-matched border + background tint
+- **Expense cards**: title | amount (red), paid-by row, divider, status badge
+- **Donut chart** in Summary uses `CustomPainter` (no chart library needed)
+- **Member actions** exposed via three-dot → `showModalBottomSheet` action sheet
+
+### Owner Screen Layout Pattern
+```dart
+Scaffold(
+  backgroundColor: AppTheme.navy,
+  body: Column(children: [
+    SafeArea(child: /* dark header content */),
+    Expanded(child: Container(
+      decoration: BoxDecoration(color: Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      child: /* scrollable white body */,
+    )),
+  ]),
+)
+```
+
+### Color Reference
+| Token | Hex | Usage |
+|---|---|---|
+| `AppTheme.navy` | `#1A2B4A` | Header backgrounds |
+| `#243560` | — | Dark stat cards inside header |
+| `AppTheme.teal` | `#4DB6AC` | Accent, active states |
+| `AppTheme.warning` | `#FF9800` | Pending badge, rent category |
+| `AppTheme.error` | `#F44336` | Rejected, amount text |
+| `AppTheme.success` | `#4CAF50` | Approved, positive balance |
+| `#F5F7FA` | — | Body background |
+
 ## Notes
 
 - Auth token stored via `SharedPreferences`, sent as `Authorization: Bearer <token>`
 - Model IDs can be strings or objects — models handle both defensively
 - `AuthGate` in `main.dart` handles role-based routing automatically
+- `Expense` model has no `category` field — use `comments` as category display
+- `MonthlyBills` (rent, food, electricity, water) drives the Summary donut chart categories
