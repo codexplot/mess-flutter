@@ -5,10 +5,12 @@ import '../services/api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
+  User? _pendingUser;
   bool _loading = false;
   String? _error;
 
   User? get user => _user;
+  User? get pendingUser => _pendingUser;
   bool get loading => _loading;
   String? get error => _error;
   bool get isAuthenticated => _user != null;
@@ -30,6 +32,45 @@ class AuthProvider extends ChangeNotifier {
       await prefs.remove('token');
     }
     _loading = false;
+    notifyListeners();
+  }
+
+  // Two-phase login: validate credentials but hold navigation until animation completes
+  Future<bool> loginPending(String email, String password) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final res = await ApiService.post(
+        '/auth/login',
+        {'email': email, 'password': password},
+        auth: false,
+      );
+      if (res['success']) {
+        final data = res['data'];
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', data['token']);
+        _pendingUser = User.fromJson(data['user']);
+        _loading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _error = res['message'];
+        _loading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      _loading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  void completeLogin() {
+    _user = _pendingUser;
+    _pendingUser = null;
     notifyListeners();
   }
 
@@ -96,6 +137,23 @@ class AuthProvider extends ChangeNotifier {
       _error = e.toString();
       _loading = false;
       notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile({String? phone, String? address}) async {
+    try {
+      final res = await ApiService.put('/auth/profile', {
+        'phone': phone,
+        'address': address,
+      });
+      if (res['success']) {
+        _user = User.fromJson(res['data']['user']);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (_) {
       return false;
     }
   }

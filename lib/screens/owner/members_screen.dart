@@ -367,6 +367,62 @@ class _MemberCardState extends State<_MemberCard> {
     }
   }
 
+  void _showMemberInfo(BuildContext context, dynamic m) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppTheme.navy,
+                  child: Text(
+                    m.name.isNotEmpty ? m.name[0].toUpperCase() : '?',
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(m.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('MEMBER', style: TextStyle(color: AppTheme.teal, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            _MemberInfoRow(icon: Icons.email_outlined, label: 'Email', value: m.email),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Mobile',
+              value: (m.phone != null && m.phone!.isNotEmpty) ? m.phone! : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Address',
+              value: (m.address != null && m.address!.isNotEmpty) ? m.address! : 'Not set',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showActions(BuildContext context) {
     final roomProv = context.read<RoomProvider>();
     final m = widget.member;
@@ -576,6 +632,15 @@ class _MemberCardState extends State<_MemberCard> {
                             fontWeight: FontWeight.w500),
                       ),
                     ],
+                  ),
+                ),
+                // Info icon
+                GestureDetector(
+                  onTap: () => _showMemberInfo(context, m),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.info_outline,
+                        color: AppTheme.teal, size: 20),
                   ),
                 ),
                 // Three-dot menu
@@ -902,6 +967,33 @@ class _SummaryRow extends StatelessWidget {
                   fontSize: 13)),
         ],
       ),
+    );
+  }
+}
+
+class _MemberInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _MemberInfoRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppTheme.teal),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+              Text(value, style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

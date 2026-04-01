@@ -6,6 +6,8 @@ class User {
   final String? roomId;
   final String? roomName;
   final String? roomCode;
+  final String? phone;
+  final String? address;
 
   User({
     required this.id,
@@ -15,6 +17,8 @@ class User {
     this.roomId,
     this.roomName,
     this.roomCode,
+    this.phone,
+    this.address,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,8 @@ class User {
       roomId: roomId,
       roomName: roomName,
       roomCode: roomCode,
+      phone: json['phone'],
+      address: json['address'],
     );
   }
 

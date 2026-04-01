@@ -25,13 +25,17 @@ class RoomMember {
   final String id;
   final String name;
   final String email;
+  final String? phone;
+  final String? address;
 
-  RoomMember({required this.id, required this.name, required this.email});
+  RoomMember({required this.id, required this.name, required this.email, this.phone, this.address});
 
   factory RoomMember.fromJson(Map<String, dynamic> json) => RoomMember(
         id: json['_id'] ?? '',
         name: json['name'] ?? '',
         email: json['email'] ?? '',
+        phone: json['phone'],
+        address: json['address'],
       );
 }
 

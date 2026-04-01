@@ -91,6 +91,10 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
         title: Text(user?.roomName ?? 'RoomMess'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: () => _showProfileInfo(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => context.read<AuthProvider>().logout(),
           ),
@@ -114,6 +118,20 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
               selectedIcon: Icon(Icons.bar_chart),
               label: 'Summary'),
         ],
+      ),
+    );
+  }
+
+  void _showProfileInfo(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ChangeNotifierProvider.value(
+        value: context.read<AuthProvider>(),
+        child: _ProfileInfoSheet(user: context.read<AuthProvider>().user),
       ),
     );
   }
@@ -148,6 +166,66 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     setState(() => _loading = true);
     _summary = await context.read<RoomProvider>().fetchMemberSummary();
     setState(() => _loading = false);
+  }
+
+  void _showMemberInfo(BuildContext context, Map<String, dynamic> m) {
+    final name = m['name'] ?? '';
+    final email = m['email'] ?? '';
+    final phone = m['phone'];
+    final address = m['address'];
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppTheme.teal,
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('MEMBER', style: TextStyle(color: AppTheme.teal, fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            _MemberInfoRow(icon: Icons.email_outlined, label: 'Email', value: email.isNotEmpty ? email : 'Not set'),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Mobile',
+              value: (phone != null && phone.toString().isNotEmpty) ? phone.toString() : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Address',
+              value: (address != null && address.toString().isNotEmpty) ? address.toString() : 'Not set',
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -423,6 +501,11 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _StatusBadge(status: mStatus, balance: bal),
+                          IconButton(
+                            icon: const Icon(Icons.info_outline,
+                                color: AppTheme.teal, size: 20),
+                            onPressed: () => _showMemberInfo(context, m),
+                          ),
                           IconButton(
                             icon: Icon(
                               isExpanded
@@ -968,6 +1051,195 @@ class _StatusBadge extends StatelessWidget {
               color: color,
               fontSize: 11,
               fontWeight: FontWeight.bold)),
+    );
+  }
+}
+
+class _MemberInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _MemberInfoRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppTheme.teal),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+              Text(value, style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Profile Info Sheet ───────────────────────────────────────────────────────
+
+class _ProfileInfoSheet extends StatefulWidget {
+  final dynamic user;
+  const _ProfileInfoSheet({required this.user});
+
+  @override
+  State<_ProfileInfoSheet> createState() => _ProfileInfoSheetState();
+}
+
+class _ProfileInfoSheetState extends State<_ProfileInfoSheet> {
+  bool _editing = false;
+  late TextEditingController _phoneCtrl;
+  late TextEditingController _addressCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneCtrl = TextEditingController(text: widget.user?.phone ?? '');
+    _addressCtrl = TextEditingController(text: widget.user?.address ?? '');
+  }
+
+  @override
+  void dispose() {
+    _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final ok = await context.read<AuthProvider>().updateProfile(
+          phone: _phoneCtrl.text.trim(),
+          address: _addressCtrl.text.trim(),
+        );
+    setState(() {
+      _saving = false;
+      if (ok) _editing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthProvider>().user;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 24, right: 24, top: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: AppTheme.teal,
+                child: Text(
+                  (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : '?',
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user?.name ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(user?.role.toUpperCase() ?? '', style: const TextStyle(color: AppTheme.teal, fontSize: 12)),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(_editing ? Icons.close : Icons.edit_outlined),
+                onPressed: () => setState(() => _editing = !_editing),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 12),
+          _InfoRow(icon: Icons.email_outlined, label: 'Email', value: user?.email ?? ''),
+          const SizedBox(height: 12),
+          if (_editing) ...[
+            TextField(
+              controller: _phoneCtrl,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Mobile Number',
+                prefixIcon: Icon(Icons.phone_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _addressCtrl,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Address',
+                prefixIcon: Icon(Icons.location_on_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Save'),
+              ),
+            ),
+          ] else ...[
+            _InfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Mobile',
+              value: user?.phone?.isNotEmpty == true ? user!.phone! : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _InfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Address',
+              value: user?.address?.isNotEmpty == true ? user!.address! : 'Not set',
+            ),
+          ],
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  const _InfoRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppTheme.teal),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+              Text(value, style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
