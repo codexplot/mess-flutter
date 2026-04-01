@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/room_provider.dart';
 import '../../providers/expense_provider.dart';
 import '../../models/room.dart';
@@ -93,6 +94,7 @@ class _MembersScreenState extends State<MembersScreen> {
     final roomProv = context.watch<RoomProvider>();
     final room = roomProv.room;
     final summary = roomProv.summary;
+    final owner = context.watch<AuthProvider>().user;
 
     // Build balance map from summary
     final balanceMap = <String, Map<String, dynamic>>{};
@@ -222,18 +224,19 @@ class _MembersScreenState extends State<MembersScreen> {
                         padding:
                             const EdgeInsets.fromLTRB(16, 16, 16, 24),
                         children: [
-                          if (members.isNotEmpty)
-                            Padding(
-                              padding:
-                                  const EdgeInsets.only(left: 4, bottom: 10),
-                              child: Text(
-                                '${members.length} Members',
-                                style: const TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 13),
-                              ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4, bottom: 10),
+                            child: Text(
+                              '${members.length + 1} Members',
+                              style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 13),
                             ),
-                          if (filtered.isEmpty)
+                          ),
+                          // Owner card always at top
+                          if (owner != null)
+                            _OwnerCard(owner: owner),
+                          if (filtered.isEmpty && _search.isNotEmpty)
                             const Padding(
                               padding: EdgeInsets.symmetric(vertical: 40),
                               child: Center(
@@ -249,11 +252,98 @@ class _MembersScreenState extends State<MembersScreen> {
                                   member: m,
                                   room: room,
                                   balanceData: balanceMap[m.id],
-                                  isFirst: filtered.indexOf(m) == 0,
                                 )),
                         ],
                       ),
                     ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Owner Card ───────────────────────────────────────────────────────────────
+
+class _OwnerCard extends StatelessWidget {
+  final dynamic owner;
+  const _OwnerCard({required this.owner});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.teal.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              color: AppTheme.teal,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                owner.name.isNotEmpty ? owner.name[0].toUpperCase() : '?',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      owner.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: AppTheme.textPrimary),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.teal.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Owner',
+                        style: TextStyle(
+                            color: AppTheme.teal,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  owner.email,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13),
+                ),
+              ],
             ),
           ),
         ],
@@ -301,13 +391,11 @@ class _MemberCard extends StatefulWidget {
   final RoomMember member;
   final Room room;
   final Map<String, dynamic>? balanceData;
-  final bool isFirst;
 
   const _MemberCard({
     required this.member,
     required this.room,
     this.balanceData,
-    this.isFirst = false,
   });
 
   @override
@@ -587,24 +675,6 @@ class _MemberCardState extends State<_MemberCard> {
                                 fontSize: 15,
                                 color: AppTheme.textPrimary),
                           ),
-                          if (widget.isFirst) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppTheme.teal.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Text(
-                                'Owner',
-                                style: TextStyle(
-                                    color: AppTheme.teal,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ],
                           if (isFoodOptOut) ...[
                             const SizedBox(width: 6),
                             Container(
