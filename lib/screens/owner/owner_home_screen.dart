@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -230,6 +231,12 @@ class _DashboardTab extends StatelessWidget {
                                 style: const TextStyle(
                                     color: AppTheme.teal, fontSize: 13),
                               ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${user?.name ?? ''} · Owner',
+                                style: const TextStyle(
+                                    color: Colors.white60, fontSize: 12),
+                              ),
                             ],
                           ),
                         ),
@@ -266,7 +273,7 @@ class _DashboardTab extends StatelessWidget {
                             } else if (v == 'profile') {
                               _showProfileInfo(context);
                             } else if (v == 'logout') {
-                              context.read<AuthProvider>().logout();
+                              context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>());
                             }
                           },
                           itemBuilder: (_) => const [
@@ -286,7 +293,42 @@ class _DashboardTab extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+                    // Room code chip
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: room.roomCode));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Room code copied!'),
+                            duration: Duration(seconds: 2),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.vpn_key_outlined, color: AppTheme.teal, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Room Code: ${room.roomCode}',
+                              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 1),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.copy_outlined, color: Colors.white54, size: 13),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     // Stat cards row
                     Row(
                       children: [

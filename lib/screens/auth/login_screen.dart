@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/room_provider.dart';
+import '../../providers/expense_provider.dart';
+import '../../main.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 import 'register_screen.dart';
@@ -21,41 +24,44 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   String? _errorMsg;
   int _failedAttempts = 0;
+  AuthProvider? _authProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _authProvider = context.read<AuthProvider>();
+        _authProvider!.addListener(_onAuthChange);
+      }
+    });
+  }
+
+  void _onAuthChange() {
+    final auth = _authProvider;
+    if (auth != null && auth.isAuthenticated && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (_) => false,
+      );
+    }
+  }
 
   @override
   void dispose() {
+    _authProvider?.removeListener(_onAuthChange);
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
 
-  void _showErrorDialog(String msg) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        icon: const Icon(Icons.lock_outline, color: AppTheme.error, size: 40),
-        title: const Text('Login Failed', textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(msg, textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          if (_failedAttempts >= 3)
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
-              },
-              child: const Text('Reset Password', style: TextStyle(color: AppTheme.teal)),
-            ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
-            child: const Text('Try Again', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+  void _showSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: AppTheme.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -65,38 +71,35 @@ class _LoginScreenState extends State<LoginScreen> {
     final pass = _passCtrl.text;
 
     if (email.isEmpty || !email.contains('@')) {
-      _showErrorDialog('Please enter a valid email address.');
+      _showSnackBar('Please enter a valid email address.');
       return;
     }
     if (pass.length < 6) {
-      _showErrorDialog('Password must be at least 6 characters.');
+      _showSnackBar('Password must be at least 6 characters.');
       return;
     }
 
     setState(() { _errorMsg = null; _loading = true; });
     final auth = context.read<AuthProvider>();
-    final ok = await auth.loginPending(email, pass);
+    final ok = await auth.login(
+      email,
+      pass,
+      roomProvider: context.read<RoomProvider>(),
+      expenseProvider: context.read<ExpenseProvider>(),
+    );
 
     if (!mounted) return;
 
-    if (ok) {
-      setState(() => _loading = false);
-      final name = auth.pendingUser?.name ?? '';
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => _SuccessDialog(name: name),
-      );
-      if (mounted) auth.completeLogin();
-    } else {
+    setState(() => _loading = false);
+
+    if (!ok) {
       final msg = auth.error ?? 'Invalid email or password';
       setState(() {
-        _loading = false;
         _failedAttempts++;
         _errorMsg = msg;
         _passCtrl.clear();
       });
-      if (mounted) _showErrorDialog(msg);
+      _showSnackBar(msg);
     }
   }
 
