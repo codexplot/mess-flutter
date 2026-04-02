@@ -6,10 +6,10 @@ import '../../widgets/common.dart';
 
 // Supported currencies
 const _kCurrencies = [
-  {'code': 'INR', 'symbol': '₹',   'name': 'Indian Rupee'},
-  {'code': 'USD', 'symbol': '\$',   'name': 'US Dollar'},
-  {'code': 'EUR', 'symbol': '€',   'name': 'Euro'},
-  {'code': 'GBP', 'symbol': '£',   'name': 'British Pound'},
+  {'code': 'INR', 'symbol': 'Rs',  'name': 'Indian Rupee'},
+  {'code': 'USD', 'symbol': 'USD', 'name': 'US Dollar'},
+  {'code': 'EUR', 'symbol': 'EUR', 'name': 'Euro'},
+  {'code': 'GBP', 'symbol': 'GBP', 'name': 'British Pound'},
   {'code': 'AED', 'symbol': 'AED', 'name': 'UAE Dirham'},
   {'code': 'SAR', 'symbol': 'SR',  'name': 'Saudi Riyal'},
   {'code': 'QAR', 'symbol': 'QR',  'name': 'Qatari Riyal'},
@@ -17,10 +17,15 @@ const _kCurrencies = [
   {'code': 'OMR', 'symbol': 'OMR', 'name': 'Omani Rial'},
   {'code': 'BHD', 'symbol': 'BD',  'name': 'Bahraini Dinar'},
   {'code': 'MYR', 'symbol': 'RM',  'name': 'Malaysian Ringgit'},
-  {'code': 'SGD', 'symbol': 'S\$', 'name': 'Singapore Dollar'},
-  {'code': 'AUD', 'symbol': 'A\$', 'name': 'Australian Dollar'},
-  {'code': 'CAD', 'symbol': 'C\$', 'name': 'Canadian Dollar'},
-  {'code': 'JPY', 'symbol': '¥',   'name': 'Japanese Yen'},
+  {'code': 'SGD', 'symbol': 'SGD', 'name': 'Singapore Dollar'},
+  {'code': 'AUD', 'symbol': 'AUD', 'name': 'Australian Dollar'},
+  {'code': 'CAD', 'symbol': 'CAD', 'name': 'Canadian Dollar'},
+  {'code': 'JPY', 'symbol': 'JPY', 'name': 'Japanese Yen'},
+  {'code': 'CNY', 'symbol': 'CNY', 'name': 'Chinese Yuan'},
+  {'code': 'CHF', 'symbol': 'CHF', 'name': 'Swiss Franc'},
+  {'code': 'NZD', 'symbol': 'NZD', 'name': 'New Zealand Dollar'},
+  {'code': 'ZAR', 'symbol': 'ZAR', 'name': 'South African Rand'},
+  {'code': 'TRY', 'symbol': 'TRY', 'name': 'Turkish Lira'},
 ];
 
 class MonthlyBillsScreen extends StatefulWidget {
@@ -109,7 +114,7 @@ class _MonthlyBillsScreenState extends State<MonthlyBillsScreen> {
                   final isSelected = c['code'] == _currencyCode;
                   return ListTile(
                     leading: Container(
-                      width: 40,
+                      width: 48,
                       height: 40,
                       decoration: BoxDecoration(
                         color: isSelected
@@ -121,8 +126,9 @@ class _MonthlyBillsScreenState extends State<MonthlyBillsScreen> {
                         child: Text(
                           c['symbol']!,
                           style: TextStyle(
-                              fontSize: 18,
+                              fontSize: c['symbol']!.length >= 3 ? 11 : c['symbol']!.length == 2 ? 13 : 18,
                               fontWeight: FontWeight.bold,
+                              letterSpacing: 0.3,
                               color: isSelected
                                   ? AppTheme.teal
                                   : AppTheme.textPrimary),
@@ -186,7 +192,18 @@ class _MonthlyBillsScreenState extends State<MonthlyBillsScreen> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon),
-        prefixText: '$_currencySymbol ',
+        prefix: Padding(
+          padding: const EdgeInsets.only(right: 4),
+          child: Text(
+            '$_currencySymbol ',
+            style: TextStyle(
+              fontSize: _currencySymbol.length >= 3 ? 11 : _currencySymbol.length == 2 ? 12 : 14,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ),
       ),
       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
     );
@@ -207,7 +224,7 @@ class _MonthlyBillsScreenState extends State<MonthlyBillsScreen> {
               Card(
                 child: ListTile(
                   leading: Container(
-                    width: 40,
+                    width: 48,
                     height: 40,
                     decoration: BoxDecoration(
                       color: AppTheme.teal.withOpacity(0.1),
@@ -216,9 +233,10 @@ class _MonthlyBillsScreenState extends State<MonthlyBillsScreen> {
                     child: Center(
                       child: Text(
                         _currencySymbol,
-                        style: const TextStyle(
-                            fontSize: 18,
+                        style: TextStyle(
+                            fontSize: _currencySymbol.length >= 3 ? 11 : _currencySymbol.length == 2 ? 13 : 18,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.3,
                             color: AppTheme.teal),
                       ),
                     ),

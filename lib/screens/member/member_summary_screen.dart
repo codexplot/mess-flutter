@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/room_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
-import '../../widgets/common.dart';
+import '../../widgets/common.dart'; // includes CurrencyText
 
 class MemberSummaryScreen extends StatefulWidget {
   const MemberSummaryScreen({super.key});
@@ -102,19 +102,30 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                   const Text('My Balance',
                       style: TextStyle(color: Colors.white70, fontSize: 13)),
                   const SizedBox(height: 6),
-                  Text(
-                    isPaid
-                        ? 'PAID ✓'
-                        : balance > 0
-                            ? 'You Owe $sym${balance.toStringAsFixed(2)}'
-                            : balance < 0
-                                ? 'You Receive $sym${balance.abs().toStringAsFixed(2)}'
-                                : 'Settled Up!',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold),
-                  ),
+                  if (isPaid || balance == 0)
+                    Text(
+                      isPaid ? 'PAID ✓' : 'Settled Up!',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Text(
+                          balance > 0 ? 'You Owe  ' : 'You Receive  ',
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 15),
+                        ),
+                        CurrencyText(
+                          symbol: sym,
+                          amount: balance.abs().toStringAsFixed(2),
+                          fontSize: 22,
+                          color: Colors.white,
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 12),
                   Row(
                     children: [

@@ -587,7 +587,8 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                   onTap: widget.onGoToSummary,
                   child: InfoCard(
                     label: 'Total Bill',
-                    value: '$sym${totalRoomExpense.toStringAsFixed(0)}',
+                    symbol: sym,
+                    value: totalRoomExpense.toStringAsFixed(0),
                     icon: Icons.account_balance_wallet_outlined,
                     color: AppTheme.teal,
                   ),
@@ -602,7 +603,8 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                   },
                   child: InfoCard(
                     label: 'Your Share',
-                    value: '$sym${perPersonShare.toStringAsFixed(0)}',
+                    symbol: sym,
+                    value: perPersonShare.toStringAsFixed(0),
                     icon: Icons.trending_up,
                     color: AppTheme.navy,
                   ),
@@ -611,7 +613,8 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                   onTap: widget.onMyExpenses,
                   child: InfoCard(
                     label: 'You Spent',
-                    value: '$sym${myContribution.toStringAsFixed(0)}',
+                    symbol: sym,
+                    value: myContribution.toStringAsFixed(0),
                     icon: Icons.shopping_bag_outlined,
                     color: AppTheme.success,
                   ),
@@ -1083,7 +1086,7 @@ class _BalanceDisplay extends StatelessWidget {
         border = AppTheme.error.withOpacity(0.2);
         textColor = AppTheme.error;
         icon = Icons.trending_up;
-        title = '$sym${balance.abs().toStringAsFixed(2)}';
+        title = balance.abs().toStringAsFixed(2);
         subtitle = 'You Need to Pay';
         break;
       case 'receives':
@@ -1091,7 +1094,7 @@ class _BalanceDisplay extends StatelessWidget {
         border = AppTheme.success.withOpacity(0.2);
         textColor = AppTheme.success;
         icon = Icons.trending_down;
-        title = '$sym${balance.abs().toStringAsFixed(2)}';
+        title = balance.abs().toStringAsFixed(2);
         subtitle = 'You Will Receive';
         break;
       default:
@@ -1099,7 +1102,7 @@ class _BalanceDisplay extends StatelessWidget {
         border = Colors.grey.shade200;
         textColor = Colors.grey;
         icon = Icons.remove;
-        title = '${sym}0';
+        title = '0';
         subtitle = 'All Settled';
     }
 
@@ -1115,11 +1118,19 @@ class _BalanceDisplay extends StatelessWidget {
         children: [
           Icon(icon, color: textColor, size: 28),
           const SizedBox(height: 6),
-          Text(title,
-              style: TextStyle(
+          status == 'paid'
+              ? Text('PAID',
+                  style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: textColor))
+              : CurrencyText(
+                  symbol: sym,
+                  amount: title,
                   fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: textColor)),
+                  color: textColor,
+                  textAlign: TextAlign.center,
+                ),
           const SizedBox(height: 4),
           Text(subtitle,
               style: TextStyle(

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/room_provider.dart';
 import '../../providers/expense_provider.dart';
 import '../../theme.dart';
+import '../../widgets/common.dart';
 
 class SummaryScreen extends StatefulWidget {
   const SummaryScreen({super.key});
@@ -284,12 +285,12 @@ class _TotalCard extends StatelessWidget {
               style:
                   TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
           const SizedBox(height: 8),
-          Text(
-            '$sym${total.toStringAsFixed(0)}',
-            style: const TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary),
+          CurrencyText(
+            symbol: sym,
+            amount: total.toStringAsFixed(0),
+            fontSize: 36,
+            color: AppTheme.textPrimary,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFF0F0F0)),

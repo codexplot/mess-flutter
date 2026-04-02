@@ -84,7 +84,8 @@ class SectionHeader extends StatelessWidget {
 
 class InfoCard extends StatelessWidget {
   final String label;
-  final String value;
+  final String value;   // number part (e.g. "500")
+  final String symbol;  // currency symbol (e.g. "AED")
   final IconData icon;
   final Color? color;
 
@@ -92,6 +93,7 @@ class InfoCard extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
+    this.symbol = '',
     required this.icon,
     this.color,
   });
@@ -113,11 +115,70 @@ class InfoCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text(value,
-                style: TextStyle(
-                    color: c, fontSize: 22, fontWeight: FontWeight.bold)),
+            symbol.isNotEmpty
+                ? CurrencyText(symbol: symbol, amount: value, fontSize: 22, color: c)
+                : Text(value,
+                    style: TextStyle(
+                        color: c, fontSize: 22, fontWeight: FontWeight.bold)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Renders currency symbol at a smaller size than the number for clean display.
+/// e.g.  AED 500  where AED is visually smaller.
+class CurrencyText extends StatelessWidget {
+  final String symbol;
+  final String amount;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final Color? color;
+  final TextAlign textAlign;
+
+  const CurrencyText({
+    super.key,
+    required this.symbol,
+    required this.amount,
+    this.fontSize = 20,
+    this.fontWeight = FontWeight.bold,
+    this.color,
+    this.textAlign = TextAlign.start,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppTheme.textPrimary;
+    // For single-char symbols (₹ etc.) scale to 75%, multi-char (AED) to 58%
+    final symSize = symbol.length >= 3
+        ? fontSize * 0.55
+        : symbol.length == 2
+            ? fontSize * 0.65
+            : fontSize * 0.75;
+
+    return RichText(
+      textAlign: textAlign,
+      text: TextSpan(
+        children: [
+          TextSpan(
+            text: symbol,
+            style: TextStyle(
+              fontSize: symSize,
+              fontWeight: FontWeight.w600,
+              color: c.withOpacity(0.75),
+              letterSpacing: 0.3,
+            ),
+          ),
+          TextSpan(
+            text: amount,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: fontWeight,
+              color: c,
+            ),
+          ),
+        ],
       ),
     );
   }
