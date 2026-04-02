@@ -343,29 +343,32 @@ class _DashboardTab extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     // Stat cards row
-                    Row(
-                      children: [
-                        Expanded(child: _StatCard(
-                          icon: Icons.attach_money,
-                          iconColor: AppTheme.teal,
-                          value: _fmtAmount(totalExpenses, sym),
-                          label: 'This Month',
-                        )),
-                        const SizedBox(width: 10),
-                        Expanded(child: _StatCard(
-                          icon: Icons.access_time_outlined,
-                          iconColor: AppTheme.warning,
-                          value: '$pendingCount',
-                          label: 'Pending',
-                        )),
-                        const SizedBox(width: 10),
-                        Expanded(child: _StatCard(
-                          icon: Icons.people_outline,
-                          iconColor: AppTheme.teal,
-                          value: '$memberCount',
-                          label: 'Members',
-                        )),
-                      ],
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(child: _StatCard(
+                            icon: Icons.account_balance_wallet_outlined,
+                            iconColor: AppTheme.teal,
+                            value: _fmtAmount(totalExpenses, sym),
+                            label: 'This Month',
+                          )),
+                          const SizedBox(width: 10),
+                          Expanded(child: _StatCard(
+                            icon: Icons.mark_email_unread_outlined,
+                            iconColor: AppTheme.warning,
+                            value: '$pendingCount',
+                            label: 'Pending',
+                          )),
+                          const SizedBox(width: 10),
+                          Expanded(child: _StatCard(
+                            icon: Icons.people_outline,
+                            iconColor: AppTheme.teal,
+                            value: '$memberCount',
+                            label: 'Members',
+                          )),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -456,30 +459,33 @@ class _DashboardTab extends StatelessWidget {
                   const SizedBox(height: 16),
 
                   // Summary cards row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _SummaryCard(
-                          icon: Icons.attach_money,
-                          iconBg: const Color(0xFFF44336),
-                          title: 'Total Expenses',
-                          value: '$sym${totalExpenses.toStringAsFixed(0)}',
-                          subtitle: expenses.isNotEmpty
-                              ? '${expenses.where((e) => e.isApproved).length} transactions'
-                              : 'No expenses yet',
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _SummaryCard(
+                            icon: Icons.payments_outlined,
+                            iconBg: const Color(0xFFF44336),
+                            title: 'Total Expenses',
+                            value: '$sym${totalExpenses.toStringAsFixed(0)}',
+                            subtitle: expenses.isNotEmpty
+                                ? '${expenses.where((e) => e.isApproved).length} transactions'
+                                : 'No expenses yet',
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _SummaryCard(
-                          icon: Icons.access_time_outlined,
-                          iconBg: AppTheme.warning,
-                          title: 'Pending\nApprovals',
-                          value: '$pendingCount',
-                          subtitle: null,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _SummaryCard(
+                            icon: Icons.pending_actions_outlined,
+                            iconBg: AppTheme.warning,
+                            title: 'Pending\nApprovals',
+                            value: '$pendingCount',
+                            subtitle: null,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 24),
 
@@ -637,6 +643,7 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
         children: [
           Icon(icon, color: iconColor, size: 20),
           const SizedBox(height: 8),
