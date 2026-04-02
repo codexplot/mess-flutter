@@ -89,6 +89,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
           MaterialPageRoute(builder: (_) => const SubmitExpenseScreen()),
         ).then((_) => context.read<ExpenseProvider>().fetchExpenses()),
         onMyExpenses: () => setState(() => _tab = 1),
+        onGoToSummary: () => setState(() => _tab = 2),
       ),
       const MemberExpensesScreen(),
       const MemberSummaryScreen(),
@@ -151,10 +152,12 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
 class _MemberDashboardTab extends StatefulWidget {
   final Future<void> Function() onAddExpense;
   final VoidCallback onMyExpenses;
+  final VoidCallback onGoToSummary;
 
   const _MemberDashboardTab({
     required this.onAddExpense,
     required this.onMyExpenses,
+    required this.onGoToSummary,
   });
 
   @override
@@ -168,6 +171,9 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
   String? _expandedExpenses;
   String? _selectedMonth; // null = current billing month
   List<String> _availableMonths = [];
+  final _scrollController = ScrollController();
+  final _balanceKey = GlobalKey();
+  final _membersKey = GlobalKey();
 
   @override
   void initState() {
@@ -466,6 +472,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     return RefreshIndicator(
       onRefresh: _load,
       child: SingleChildScrollView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -584,29 +591,53 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
               mainAxisSpacing: 12,
               childAspectRatio: 1.5,
               children: [
-                InfoCard(
-                  label: 'Total Bill',
-                  value: '₹${totalRoomExpense.toStringAsFixed(0)}',
-                  icon: Icons.currency_rupee,
-                  color: AppTheme.teal,
+                GestureDetector(
+                  onTap: widget.onGoToSummary,
+                  child: InfoCard(
+                    label: 'Total Bill',
+                    value: '₹${totalRoomExpense.toStringAsFixed(0)}',
+                    icon: Icons.currency_rupee,
+                    color: AppTheme.teal,
+                  ),
                 ),
-                InfoCard(
-                  label: 'Your Share',
-                  value: '₹${perPersonShare.toStringAsFixed(0)}',
-                  icon: Icons.trending_up,
-                  color: AppTheme.navy,
+                GestureDetector(
+                  onTap: () {
+                    if (_balanceKey.currentContext != null) {
+                      Scrollable.ensureVisible(_balanceKey.currentContext!,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeInOut);
+                    }
+                  },
+                  child: InfoCard(
+                    label: 'Your Share',
+                    value: '₹${perPersonShare.toStringAsFixed(0)}',
+                    icon: Icons.trending_up,
+                    color: AppTheme.navy,
+                  ),
                 ),
-                InfoCard(
-                  label: 'You Spent',
-                  value: '₹${myContribution.toStringAsFixed(0)}',
-                  icon: Icons.shopping_bag_outlined,
-                  color: AppTheme.success,
+                GestureDetector(
+                  onTap: widget.onMyExpenses,
+                  child: InfoCard(
+                    label: 'You Spent',
+                    value: '₹${myContribution.toStringAsFixed(0)}',
+                    icon: Icons.shopping_bag_outlined,
+                    color: AppTheme.success,
+                  ),
                 ),
-                InfoCard(
-                  label: 'Members',
-                  value: '$numberOfMembers',
-                  icon: Icons.people_outline,
-                  color: const Color(0xFF7C3AED),
+                GestureDetector(
+                  onTap: () {
+                    if (_membersKey.currentContext != null) {
+                      Scrollable.ensureVisible(_membersKey.currentContext!,
+                          duration: const Duration(milliseconds: 400),
+                          curve: Curves.easeInOut);
+                    }
+                  },
+                  child: InfoCard(
+                    label: 'Members',
+                    value: '$numberOfMembers',
+                    icon: Icons.people_outline,
+                    color: const Color(0xFF7C3AED),
+                  ),
                 ),
               ],
             ),
@@ -614,6 +645,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
 
             // Your Balance card
             Card(
+              key: _balanceKey,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -676,7 +708,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
             const SizedBox(height: 16),
 
             // Room Members
-            const SectionHeader(title: 'Room Members'),
+            SectionHeader(key: _membersKey, title: 'Room Members'),
             const SizedBox(height: 12),
             ...members.map((m) {
               final mId = m['_id'] ?? '';
