@@ -71,6 +71,23 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateRoomDetails(String address, String location) async {
+    try {
+      final res = await ApiService.put('/rooms/room-details', {'address': address, 'location': location});
+      if (res['success']) {
+        await fetchRoom();
+        return true;
+      }
+      _error = res['message'];
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<bool> addMember(String email) async {
     try {
       final res = await ApiService.post('/rooms/add-member', {'email': email});
@@ -166,6 +183,13 @@ class RoomProvider extends ChangeNotifier {
       if (res['success']) return res['data'];
     } catch (_) {}
     return null;
+  }
+
+  void clear() {
+    _room = null;
+    _summary = null;
+    _error = null;
+    notifyListeners();
   }
 
   void clearError() {

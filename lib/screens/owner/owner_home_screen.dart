@@ -270,6 +270,8 @@ class _DashboardTab extends StatelessWidget {
                                   MaterialPageRoute(
                                       builder: (_) =>
                                           const MonthlyBillsScreen()));
+                            } else if (v == 'room-details') {
+                              _showEditRoomDetails(context);
                             } else if (v == 'profile') {
                               _showProfileInfo(context);
                             } else if (v == 'logout') {
@@ -278,6 +280,16 @@ class _DashboardTab extends StatelessWidget {
                           },
                           itemBuilder: (_) => const [
                             PopupMenuItem(value: 'bills', child: Text('Monthly Bills')),
+                            PopupMenuItem(
+                              value: 'room-details',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_location_alt_outlined, size: 18, color: Colors.black87),
+                                  SizedBox(width: 8),
+                                  Text('Room Details'),
+                                ],
+                              ),
+                            ),
                             PopupMenuItem(
                               value: 'profile',
                               child: Row(
@@ -430,6 +442,81 @@ class _DashboardTab extends StatelessWidget {
                   else
                     ...recentExpenses.map((e) => _ExpenseCard(expense: e)),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static void _showEditRoomDetails(BuildContext context) {
+    final room = context.read<RoomProvider>().room;
+    final addressCtrl = TextEditingController(text: room?.address ?? '');
+    final locationCtrl = TextEditingController(text: room?.location ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Room Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.navy)),
+            const SizedBox(height: 4),
+            const Text('Set address and location for your room',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            const SizedBox(height: 20),
+            TextField(
+              controller: addressCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Address',
+                hintText: 'e.g. 123 Main St, Building A',
+                prefixIcon: Icon(Icons.location_on_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: locationCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Location / Area',
+                hintText: 'e.g. Kozhikode, Kerala',
+                prefixIcon: Icon(Icons.map_outlined),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.navy,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final ok = await context.read<RoomProvider>().updateRoomDetails(
+                    addressCtrl.text.trim(),
+                    locationCtrl.text.trim(),
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(ok ? 'Room details saved!' : 'Failed to save'),
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                  }
+                },
+                child: const Text('Save', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
               ),
             ),
           ],

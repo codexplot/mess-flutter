@@ -179,6 +179,100 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     setState(() => _loading = false);
   }
 
+  void _showRoomInfo(BuildContext context, {
+    required String name,
+    required String address,
+    required String location,
+    required String ownerName,
+    required String ownerEmail,
+    required String roomCode,
+    required String billingMonth,
+  }) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.navy,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.home, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Room $name',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('ROOM INFO',
+                          style: TextStyle(
+                              color: AppTheme.navy,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.8)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Address',
+              value: address.isNotEmpty ? address : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.map_outlined,
+              label: 'Location',
+              value: location.isNotEmpty ? location : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.person_outline,
+              label: 'Owner',
+              value: ownerName.isNotEmpty ? ownerName : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.email_outlined,
+              label: 'Owner Email',
+              value: ownerEmail.isNotEmpty ? ownerEmail : 'Not set',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.vpn_key_outlined,
+              label: 'Room Code',
+              value: roomCode.isNotEmpty ? roomCode : 'N/A',
+            ),
+            const SizedBox(height: 12),
+            _MemberInfoRow(
+              icon: Icons.calendar_today_outlined,
+              label: 'Billing Month',
+              value: billingMonth.isNotEmpty ? billingMonth : 'N/A',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showMemberInfo(BuildContext context, Map<String, dynamic> m) {
     final name = m['name'] ?? '';
     final email = m['email'] ?? '';
@@ -269,6 +363,10 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     final roomName = room['name'] ?? '';
     final roomCode = room['roomCode'] ?? '';
     final billingMonth = room['billingMonth'] ?? '';
+    final roomAddress = room['address'] ?? '';
+    final roomLocation = room['location'] ?? '';
+    final ownerName = room['ownerName'] ?? '';
+    final ownerEmail = room['ownerEmail'] ?? '';
     final totalRoomExpense = (_summary!['totalRoomExpense'] ?? 0).toDouble();
     final perPersonShare = (_summary!['perPersonShare'] ?? 0).toDouble();
     final myContribution = (_summary!['myContribution'] ?? 0).toDouble();
@@ -325,11 +423,37 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
-                  Text('Room $roomName',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      Text('Room $roomName',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => _showRoomInfo(
+                          context,
+                          name: roomName,
+                          address: roomAddress,
+                          location: roomLocation,
+                          ownerName: ownerName,
+                          ownerEmail: ownerEmail,
+                          roomCode: roomCode,
+                          billingMonth: billingMonth,
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.info_outline,
+                              color: Colors.white, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [

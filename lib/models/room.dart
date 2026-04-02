@@ -51,6 +51,8 @@ class Room {
   final List<String> foodOptOut;
   final MonthlyBills monthlyBills;
   final String billingMonth;
+  final String address;
+  final String location;
 
   Room({
     required this.id,
@@ -64,6 +66,8 @@ class Room {
     required this.foodOptOut,
     required this.monthlyBills,
     required this.billingMonth,
+    this.address = '',
+    this.location = '',
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -111,6 +115,8 @@ class Room {
           ? MonthlyBills.fromJson(json['monthlyBills'])
           : MonthlyBills(rent: 0, food: 0, electricity: 0, water: 0),
       billingMonth: json['billingMonth'] ?? '',
+      address: json['address'] ?? '',
+      location: json['location'] ?? '',
     );
   }
 }
