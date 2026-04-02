@@ -92,36 +92,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _changePassword() async {
-    final current = _currentPassCtrl.text;
-    final newPass = _newPassCtrl.text;
-    final confirm = _confirmPassCtrl.text;
+  void _showChangePasswordSheet(BuildContext context) {
+    _currentPassCtrl.clear();
+    _newPassCtrl.clear();
+    _confirmPassCtrl.clear();
+    _obscureCurrent = true;
+    _obscureNew = true;
+    _obscureConfirm = true;
 
-    if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
-      _showSnack('All password fields are required', error: true);
-      return;
-    }
-    if (newPass.length < 6) {
-      _showSnack('New password must be at least 6 characters', error: true);
-      return;
-    }
-    if (newPass != confirm) {
-      _showSnack('New passwords do not match', error: true);
-      return;
-    }
-
-    setState(() => _savingPass = true);
-    final error = await context.read<AuthProvider>().changePassword(current, newPass);
-    setState(() => _savingPass = false);
-
-    if (error != null) {
-      _showSnack(error, error: true);
-    } else {
-      _currentPassCtrl.clear();
-      _newPassCtrl.clear();
-      _confirmPassCtrl.clear();
-      _showSnack('Password changed successfully ✓');
-    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Change Password',
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.navy)),
+              const SizedBox(height: 20),
+              _PasswordField(
+                controller: _currentPassCtrl,
+                label: 'Current Password',
+                obscure: _obscureCurrent,
+                onToggle: () =>
+                    setSheetState(() => _obscureCurrent = !_obscureCurrent),
+              ),
+              const SizedBox(height: 14),
+              _PasswordField(
+                controller: _newPassCtrl,
+                label: 'New Password',
+                obscure: _obscureNew,
+                onToggle: () =>
+                    setSheetState(() => _obscureNew = !_obscureNew),
+              ),
+              const SizedBox(height: 14),
+              _PasswordField(
+                controller: _confirmPassCtrl,
+                label: 'Confirm New Password',
+                obscure: _obscureConfirm,
+                onToggle: () =>
+                    setSheetState(() => _obscureConfirm = !_obscureConfirm),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.navy,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: _savingPass
+                      ? null
+                      : () async {
+                          final current = _currentPassCtrl.text;
+                          final newPass = _newPassCtrl.text;
+                          final confirm = _confirmPassCtrl.text;
+                          if (current.isEmpty || newPass.isEmpty || confirm.isEmpty) {
+                            _showSnack('All fields are required', error: true);
+                            return;
+                          }
+                          if (newPass.length < 6) {
+                            _showSnack('Min 6 characters', error: true);
+                            return;
+                          }
+                          if (newPass != confirm) {
+                            _showSnack('Passwords do not match', error: true);
+                            return;
+                          }
+                          setSheetState(() => _savingPass = true);
+                          final error = await context
+                              .read<AuthProvider>()
+                              .changePassword(current, newPass);
+                          setSheetState(() => _savingPass = false);
+                          if (context.mounted) Navigator.pop(ctx);
+                          _showSnack(error ?? 'Password changed ✓',
+                              error: error != null);
+                        },
+                  child: _savingPass
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Text('Update Password',
+                          style: TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showSnack(String msg, {bool error = false}) {
@@ -252,64 +326,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-
-            // ── Change Password Section ────────────────────────────
-            _SectionTitle(title: 'Change Password', icon: Icons.lock_outline),
             const SizedBox(height: 12),
+
+            // ── Change Password ────────────────────────────────────
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _PasswordField(
-                      controller: _currentPassCtrl,
-                      label: 'Current Password',
-                      obscure: _obscureCurrent,
-                      onToggle: () =>
-                          setState(() => _obscureCurrent = !_obscureCurrent),
-                    ),
-                    const SizedBox(height: 14),
-                    _PasswordField(
-                      controller: _newPassCtrl,
-                      label: 'New Password',
-                      obscure: _obscureNew,
-                      onToggle: () =>
-                          setState(() => _obscureNew = !_obscureNew),
-                    ),
-                    const SizedBox(height: 14),
-                    _PasswordField(
-                      controller: _confirmPassCtrl,
-                      label: 'Confirm New Password',
-                      obscure: _obscureConfirm,
-                      onToggle: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
-                    ),
-                    const SizedBox(height: 18),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.navy,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: _savingPass ? null : _changePassword,
-                        child: _savingPass
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Text('Change Password',
-                                style: TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.navy.withOpacity(0.08),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lock_outline, color: AppTheme.navy, size: 20),
                 ),
+                title: const Text('Change Password',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                subtitle: const Text('Update your account password',
+                    style: TextStyle(fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                onTap: () => _showChangePasswordSheet(context),
               ),
             ),
             const SizedBox(height: 24),
