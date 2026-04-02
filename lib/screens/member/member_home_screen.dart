@@ -404,80 +404,84 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Room banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Hello, ${context.read<AuthProvider>().user?.name ?? ''}!',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+            Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Text(
+                        'Hello, ${context.read<AuthProvider>().user?.name ?? ''}!',
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                      const SizedBox(height: 4),
                       Text('Room $roomName',
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold)),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => _showRoomInfo(
-                          context,
-                          name: roomName,
-                          address: roomAddress,
-                          location: roomLocation,
-                          ownerName: ownerName,
-                          ownerEmail: ownerEmail,
-                          roomCode: roomCode,
-                          billingMonth: billingMonth,
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.info_outline,
-                              color: Colors.white, size: 18),
-                        ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          if (roomCode.isNotEmpty) ...[
+                            const Icon(Icons.meeting_room,
+                                color: Colors.white54, size: 14),
+                            const SizedBox(width: 4),
+                            Text('Code: $roomCode',
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13)),
+                            const Spacer(),
+                          ],
+                          if (billingMonth.isNotEmpty) ...[
+                            const Icon(Icons.calendar_today,
+                                color: Colors.white54, size: 14),
+                            const SizedBox(width: 4),
+                            Text(billingMonth,
+                                style: const TextStyle(
+                                    color: Colors.white70, fontSize: 13)),
+                          ],
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      if (roomCode.isNotEmpty) ...[
-                        const Icon(Icons.meeting_room,
-                            color: Colors.white54, size: 14),
-                        const SizedBox(width: 4),
-                        Text('Code: $roomCode',
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13)),
-                        const Spacer(),
-                      ],
-                      if (billingMonth.isNotEmpty) ...[
-                        const Icon(Icons.calendar_today,
-                            color: Colors.white54, size: 14),
-                        const SizedBox(width: 4),
-                        Text(billingMonth,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13)),
-                      ],
-                    ],
+                ),
+                // Info button pinned to top-right corner
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: GestureDetector(
+                    onTap: () => _showRoomInfo(
+                      context,
+                      name: roomName,
+                      address: roomAddress,
+                      location: roomLocation,
+                      ownerName: ownerName,
+                      ownerEmail: ownerEmail,
+                      roomCode: roomCode,
+                      billingMonth: billingMonth,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.info_outline,
+                          color: Colors.white, size: 18),
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
