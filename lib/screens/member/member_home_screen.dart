@@ -20,6 +20,14 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
   int _tab = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<RoomProvider>().fetchRoom();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().user;
 
