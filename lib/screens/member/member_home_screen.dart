@@ -268,7 +268,22 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     final balance = (_summary!['balance'] ?? 0).toDouble();
     final status = _summary!['status'] ?? 'settled';
     final eatsFood = _summary!['eatsFood'] ?? true;
-    final members = (_summary!['memberSummary'] as List?) ?? [];
+    // Sort: current user first, owner second, then others
+    final rawMembers = List<Map<String, dynamic>>.from(
+      ((_summary!['memberSummary'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)),
+    );
+    rawMembers.sort((a, b) {
+      final aIsMe = (a['isMe'] ?? false) as bool;
+      final bIsMe = (b['isMe'] ?? false) as bool;
+      final aIsOwner = (a['isOwner'] ?? false) as bool;
+      final bIsOwner = (b['isOwner'] ?? false) as bool;
+      if (aIsMe) return -1;
+      if (bIsMe) return 1;
+      if (aIsOwner) return -1;
+      if (bIsOwner) return 1;
+      return 0;
+    });
+    final members = rawMembers;
     final bills = (_summary!['monthlyBills'] ?? {}) as Map<String, dynamic>;
 
     // +1 to include the owner in the food split
