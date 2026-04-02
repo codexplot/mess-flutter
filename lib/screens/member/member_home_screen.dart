@@ -37,9 +37,9 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
         appBar: AppBar(
           title: const Text('RoomMess'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
+            TextButton(
               onPressed: () => context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>()),
+              child: const Text('Logout', style: TextStyle(color: Colors.white70, fontSize: 14)),
             ),
           ],
         ),
@@ -104,9 +104,9 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
             icon: const Icon(Icons.account_circle_outlined),
             onPressed: () => _showProfileInfo(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
+          TextButton(
             onPressed: () => context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>()),
+            child: const Text('Logout', style: TextStyle(color: Colors.white70, fontSize: 14)),
           ),
         ],
       ),
