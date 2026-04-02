@@ -96,7 +96,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(user?.roomName ?? 'RoomMess'),
+        title: Text(user?.roomName != null ? 'Room ${user!.roomName}' : 'RoomMess'),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
