@@ -430,7 +430,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 8),
+                      const Spacer(),
                       GestureDetector(
                         onTap: () => _showRoomInfo(
                           context,
@@ -443,7 +443,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                           billingMonth: billingMonth,
                         ),
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.15),
                             shape: BoxShape.circle,
