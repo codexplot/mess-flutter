@@ -184,6 +184,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     final email = m['email'] ?? '';
     final phone = m['phone'];
     final address = m['address'];
+    final isOwner = m['isOwner'] ?? false;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -199,7 +200,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppTheme.teal,
+                  backgroundColor: isOwner ? AppTheme.navy : AppTheme.teal,
                   child: Text(
                     name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
@@ -211,7 +212,14 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const Text('MEMBER', style: TextStyle(color: AppTheme.teal, fontSize: 12)),
+                      Text(
+                        isOwner ? 'OWNER' : 'MEMBER',
+                        style: TextStyle(
+                          color: isOwner ? AppTheme.navy : AppTheme.teal,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -546,7 +554,11 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                         ],
                       ),
                       trailing: isOwner
-                          ? null
+                          ? IconButton(
+                              icon: const Icon(Icons.info_outline,
+                                  color: AppTheme.navy, size: 20),
+                              onPressed: () => _showMemberInfo(context, m),
+                            )
                           : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
