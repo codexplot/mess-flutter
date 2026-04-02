@@ -52,7 +52,11 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
     }
 
     final tabs = [
-      _DashboardTab(onGoToExpenses: () => setState(() => _tab = 1)),
+      _DashboardTab(
+        onGoToExpenses: () => setState(() => _tab = 1),
+        onGoToMembers:  () => setState(() => _tab = 2),
+        onGoToSummary:  () => setState(() => _tab = 3),
+      ),
       ExpensesScreen(onGoBack: null),
       const MembersScreen(),
       const SummaryScreen(),
@@ -161,8 +165,14 @@ class _NavItem extends StatelessWidget {
 
 class _DashboardTab extends StatelessWidget {
   final VoidCallback onGoToExpenses;
+  final VoidCallback onGoToMembers;
+  final VoidCallback onGoToSummary;
 
-  const _DashboardTab({required this.onGoToExpenses});
+  const _DashboardTab({
+    required this.onGoToExpenses,
+    required this.onGoToMembers,
+    required this.onGoToSummary,
+  });
 
   String _fmtAmount(double n, String sym) {
     if (n >= 1000) return '$sym${(n / 1000).toStringAsFixed(1)}k';
@@ -347,25 +357,34 @@ class _DashboardTab extends StatelessWidget {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(child: _StatCard(
-                            icon: Icons.account_balance_wallet_outlined,
-                            iconColor: AppTheme.teal,
-                            value: _fmtAmount(totalExpenses, sym),
-                            label: 'This Month',
+                          Expanded(child: GestureDetector(
+                            onTap: onGoToExpenses,
+                            child: _StatCard(
+                              icon: Icons.account_balance_wallet_outlined,
+                              iconColor: AppTheme.teal,
+                              value: _fmtAmount(totalExpenses, sym),
+                              label: 'This Month',
+                            ),
                           )),
                           const SizedBox(width: 10),
-                          Expanded(child: _StatCard(
-                            icon: Icons.mark_email_unread_outlined,
-                            iconColor: AppTheme.warning,
-                            value: '$pendingCount',
-                            label: 'Pending',
+                          Expanded(child: GestureDetector(
+                            onTap: onGoToExpenses,
+                            child: _StatCard(
+                              icon: Icons.mark_email_unread_outlined,
+                              iconColor: AppTheme.warning,
+                              value: '$pendingCount',
+                              label: 'Pending',
+                            ),
                           )),
                           const SizedBox(width: 10),
-                          Expanded(child: _StatCard(
-                            icon: Icons.people_outline,
-                            iconColor: AppTheme.teal,
-                            value: '$memberCount',
-                            label: 'Members',
+                          Expanded(child: GestureDetector(
+                            onTap: onGoToMembers,
+                            child: _StatCard(
+                              icon: Icons.people_outline,
+                              iconColor: AppTheme.teal,
+                              value: '$memberCount',
+                              label: 'Members',
+                            ),
                           )),
                         ],
                       ),
@@ -464,24 +483,30 @@ class _DashboardTab extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Expanded(
-                          child: _SummaryCard(
-                            icon: Icons.payments_outlined,
-                            iconBg: const Color(0xFFF44336),
-                            title: 'Total Expenses',
-                            value: '$sym${totalExpenses.toStringAsFixed(0)}',
-                            subtitle: expenses.isNotEmpty
-                                ? '${expenses.where((e) => e.isApproved).length} transactions'
-                                : 'No expenses yet',
+                          child: GestureDetector(
+                            onTap: onGoToSummary,
+                            child: _SummaryCard(
+                              icon: Icons.payments_outlined,
+                              iconBg: const Color(0xFFF44336),
+                              title: 'Total Expenses',
+                              value: '$sym${totalExpenses.toStringAsFixed(0)}',
+                              subtitle: expenses.isNotEmpty
+                                  ? '${expenses.where((e) => e.isApproved).length} transactions'
+                                  : 'No expenses yet',
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _SummaryCard(
-                            icon: Icons.pending_actions_outlined,
-                            iconBg: AppTheme.warning,
-                            title: 'Pending\nApprovals',
-                            value: '$pendingCount',
-                            subtitle: null,
+                          child: GestureDetector(
+                            onTap: onGoToExpenses,
+                            child: _SummaryCard(
+                              icon: Icons.pending_actions_outlined,
+                              iconBg: AppTheme.warning,
+                              title: 'Pending\nApprovals',
+                              value: '$pendingCount',
+                              subtitle: null,
+                            ),
                           ),
                         ),
                       ],
@@ -515,12 +540,18 @@ class _DashboardTab extends StatelessWidget {
                   const SizedBox(height: 12),
 
                   if (expenses.isEmpty)
-                    _EmptyState(
-                      icon: Icons.receipt_long,
-                      message: 'No expenses yet',
+                    GestureDetector(
+                      onTap: onGoToExpenses,
+                      child: const _EmptyState(
+                        icon: Icons.receipt_long,
+                        message: 'No expenses yet',
+                      ),
                     )
                   else
-                    ...recentExpenses.map((e) => _ExpenseCard(expense: e)),
+                    ...recentExpenses.map((e) => GestureDetector(
+                          onTap: onGoToExpenses,
+                          child: _ExpenseCard(expense: e),
+                        )),
                 ],
               ),
             ),
