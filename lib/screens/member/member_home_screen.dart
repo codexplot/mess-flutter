@@ -96,7 +96,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(user?.roomName != null ? 'Room ${user!.roomName}' : 'RoomMess'),
+        title: const Text('RoomMess'),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -325,7 +325,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                     style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
-                  Text(roomName,
+                  Text('Room $roomName',
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 22,
