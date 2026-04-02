@@ -694,17 +694,10 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                color: isOwner
-                    ? AppTheme.navy.withOpacity(0.05)
-                    : isMe ? AppTheme.teal.withOpacity(0.05) : null,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: isOwner
-                        ? AppTheme.navy.withOpacity(0.3)
-                        : isMe
-                            ? AppTheme.teal.withOpacity(0.3)
-                            : Colors.grey.withOpacity(0.15),
+                    color: Colors.grey.withOpacity(0.15),
                   ),
                 ),
                 child: Column(
