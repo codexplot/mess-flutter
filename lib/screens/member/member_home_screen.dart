@@ -423,6 +423,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
       );
     }
 
+    final sym = context.read<RoomProvider>().currencySymbol;
     final room = (_summary!['room'] ?? {}) as Map<String, dynamic>;
     final roomName = room['name'] ?? '';
     final roomCode = room['roomCode'] ?? '';
@@ -586,8 +587,8 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                   onTap: widget.onGoToSummary,
                   child: InfoCard(
                     label: 'Total Bill',
-                    value: '₹${totalRoomExpense.toStringAsFixed(0)}',
-                    icon: Icons.currency_rupee,
+                    value: '$sym${totalRoomExpense.toStringAsFixed(0)}',
+                    icon: Icons.account_balance_wallet_outlined,
                     color: AppTheme.teal,
                   ),
                 ),
@@ -601,7 +602,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                   },
                   child: InfoCard(
                     label: 'Your Share',
-                    value: '₹${perPersonShare.toStringAsFixed(0)}',
+                    value: '$sym${perPersonShare.toStringAsFixed(0)}',
                     icon: Icons.trending_up,
                     color: AppTheme.navy,
                   ),
@@ -610,7 +611,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                   onTap: widget.onMyExpenses,
                   child: InfoCard(
                     label: 'You Spent',
-                    value: '₹${myContribution.toStringAsFixed(0)}',
+                    value: '$sym${myContribution.toStringAsFixed(0)}',
                     icon: Icons.shopping_bag_outlined,
                     color: AppTheme.success,
                   ),
@@ -666,13 +667,13 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                     const Divider(height: 16),
                     _SummaryRow(
                       label: 'Your Share',
-                      value: '₹${perPersonShare.toStringAsFixed(2)}',
+                      value: '$sym${perPersonShare.toStringAsFixed(2)}',
                       bold: true,
                       color: AppTheme.teal,
                     ),
                     _SummaryRow(
                       label: '− Your Contributions',
-                      value: '₹${myContribution.toStringAsFixed(2)}',
+                      value: '$sym${myContribution.toStringAsFixed(2)}',
                       color: AppTheme.success,
                     ),
                     const SizedBox(height: 4),
@@ -686,7 +687,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                                   : 'Balance',
                       value: status == 'paid'
                           ? 'PAID ✓'
-                          : '₹${balance.abs().toStringAsFixed(2)}',
+                          : '$sym${balance.abs().toStringAsFixed(2)}',
                       bold: true,
                       color: status == 'pays'
                           ? AppTheme.error
@@ -768,7 +769,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (!isOwner)
-                          Text('Spent: ₹${contribution.toStringAsFixed(0)}',
+                          Text('Spent: $sym${contribution.toStringAsFixed(0)}',
                               style: const TextStyle(fontSize: 12)),
                           if (!mEatsFood)
                             Container(
@@ -850,14 +851,14 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                                   ? 'Your Share'
                                   : "${name.split(' ')[0]}'s Share",
                               value:
-                                  '₹${share.toStringAsFixed(2)}',
+                                  '$sym${share.toStringAsFixed(2)}',
                               bold: true,
                               color: AppTheme.teal,
                             ),
                             _SummaryRowSmall(
                               label: '− Contributions',
                               value:
-                                  '₹${contribution.toStringAsFixed(2)}',
+                                  '$sym${contribution.toStringAsFixed(2)}',
                               color: AppTheme.success,
                             ),
                             _SummaryRowSmall(
@@ -870,7 +871,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                                           : 'Balance',
                               value: mStatus == 'paid'
                                   ? 'PAID ✓'
-                                  : '₹${bal.abs().toStringAsFixed(2)}',
+                                  : '$sym${bal.abs().toStringAsFixed(2)}',
                               bold: true,
                               color: mStatus == 'pays'
                                   ? AppTheme.error
@@ -949,7 +950,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                                           ),
                                         ),
                                         Text(
-                                          '₹${amount.toStringAsFixed(0)}',
+                                          '$sym${amount.toStringAsFixed(0)}',
                                           style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 12,
@@ -982,6 +983,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     required bool eatsFood,
     bool small = false,
   }) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     final rows = <Widget>[];
     final billFields = [
       {'key': 'rent', 'label': 'Rent', 'icon': Icons.home_outlined},
@@ -1003,7 +1005,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
             label: label,
             icon: icon,
             calcText: 'opted out',
-            amount: '₹0',
+            amount: '${sym}0',
             optOut: true,
             small: small,
           ));
@@ -1013,7 +1015,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
             label: label,
             icon: icon,
             calcText: '÷ $foodEaters',
-            amount: '₹${share.toStringAsFixed(small ? 0 : 2)}',
+            amount: '$sym${share.toStringAsFixed(small ? 0 : 2)}',
             small: small,
           ));
         }
@@ -1023,7 +1025,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
           label: label,
           icon: icon,
           calcText: '÷ $memberCount',
-          amount: '₹${share.toStringAsFixed(small ? 0 : 2)}',
+          amount: '$sym${share.toStringAsFixed(small ? 0 : 2)}',
           small: small,
         ));
       }
@@ -1062,6 +1064,7 @@ class _BalanceDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     Color bg, border, textColor;
     IconData icon;
     String title, subtitle;
@@ -1080,7 +1083,7 @@ class _BalanceDisplay extends StatelessWidget {
         border = AppTheme.error.withOpacity(0.2);
         textColor = AppTheme.error;
         icon = Icons.trending_up;
-        title = '₹${balance.abs().toStringAsFixed(2)}';
+        title = '$sym${balance.abs().toStringAsFixed(2)}';
         subtitle = 'You Need to Pay';
         break;
       case 'receives':
@@ -1088,7 +1091,7 @@ class _BalanceDisplay extends StatelessWidget {
         border = AppTheme.success.withOpacity(0.2);
         textColor = AppTheme.success;
         icon = Icons.trending_down;
-        title = '₹${balance.abs().toStringAsFixed(2)}';
+        title = '$sym${balance.abs().toStringAsFixed(2)}';
         subtitle = 'You Will Receive';
         break;
       default:
@@ -1096,7 +1099,7 @@ class _BalanceDisplay extends StatelessWidget {
         border = Colors.grey.shade200;
         textColor = Colors.grey;
         icon = Icons.remove;
-        title = '₹0';
+        title = '${sym}0';
         subtitle = 'All Settled';
     }
 
@@ -1277,6 +1280,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     Color color;
     String label;
 
@@ -1287,11 +1291,11 @@ class _StatusBadge extends StatelessWidget {
         break;
       case 'pays':
         color = AppTheme.error;
-        label = 'Pay ₹${balance.abs().toStringAsFixed(0)}';
+        label = 'Pay $sym${balance.abs().toStringAsFixed(0)}';
         break;
       case 'receives':
         color = AppTheme.teal;
-        label = 'Get ₹${balance.abs().toStringAsFixed(0)}';
+        label = 'Get $sym${balance.abs().toStringAsFixed(0)}';
         break;
       default:
         color = AppTheme.textSecondary;

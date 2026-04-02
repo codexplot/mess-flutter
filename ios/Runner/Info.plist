@@ -6,6 +6,11 @@
 	<string>RoomMess needs access to your photo library to upload bill images.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>RoomMess needs camera access to capture bill photos.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

@@ -7,11 +7,13 @@ class RoomProvider extends ChangeNotifier {
   Map<String, dynamic>? _summary;
   bool _loading = false;
   String? _error;
+  String _currencySymbol = '₹';
 
   Room? get room => _room;
   Map<String, dynamic>? get summary => _summary;
   bool get loading => _loading;
   String? get error => _error;
+  String get currencySymbol => _currencySymbol;
 
   Future<void> fetchRoom() async {
     _loading = true;
@@ -20,6 +22,7 @@ class RoomProvider extends ChangeNotifier {
       final res = await ApiService.get('/rooms/my-room');
       if (res['success']) {
         _room = Room.fromJson(res['data']);
+        _currencySymbol = _room!.currencySymbol;
       } else {
         _error = res['message'];
       }
@@ -48,7 +51,16 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateMonthlyBills(double rent, double food, double electricity, double water, String billingMonth) async {
+  Future<bool> updateMonthlyBills(
+    double rent,
+    double food,
+    double electricity,
+    double water,
+    String billingMonth, {
+    String currencyCode = 'INR',
+    String currencySymbol = '₹',
+    String currencyName = 'Indian Rupee',
+  }) async {
     try {
       final res = await ApiService.put('/rooms/monthly-bills', {
         'rent': rent,
@@ -56,8 +68,14 @@ class RoomProvider extends ChangeNotifier {
         'electricity': electricity,
         'water': water,
         'billingMonth': billingMonth,
+        'currency': {
+          'code': currencyCode,
+          'symbol': currencySymbol,
+          'name': currencyName,
+        },
       });
       if (res['success']) {
+        _currencySymbol = currencySymbol;
         await fetchRoom();
         return true;
       }
@@ -181,7 +199,17 @@ class RoomProvider extends ChangeNotifier {
     try {
       final path = month != null ? '/rooms/my-summary?month=$month' : '/rooms/my-summary';
       final res = await ApiService.get(path);
-      if (res['success']) return res['data'];
+      if (res['success']) {
+        final data = res['data'] as Map<String, dynamic>;
+        // Cache currency symbol from summary
+        final roomData = data['room'] as Map<String, dynamic>?;
+        final currency = roomData?['currency'] as Map<String, dynamic>?;
+        if (currency != null && currency['symbol'] != null) {
+          _currencySymbol = currency['symbol'] as String;
+          notifyListeners();
+        }
+        return data;
+      }
     } catch (_) {}
     return null;
   }
@@ -200,6 +228,7 @@ class RoomProvider extends ChangeNotifier {
     _room = null;
     _summary = null;
     _error = null;
+    _currencySymbol = '₹';
     notifyListeners();
   }
 

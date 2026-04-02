@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/room_provider.dart';
+import '../../providers/expense_provider.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
 
@@ -40,6 +42,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _emailCtrl.text.trim(),
       _passCtrl.text,
       roomCode: _isMember ? _roomCodeCtrl.text.trim() : null,
+      roomProvider: context.read<RoomProvider>(),
+      expenseProvider: context.read<ExpenseProvider>(),
     );
     if (!mounted) return;
     if (ok) {

@@ -164,14 +164,15 @@ class _DashboardTab extends StatelessWidget {
 
   const _DashboardTab({required this.onGoToExpenses});
 
-  String _fmtAmount(double n) {
-    if (n >= 1000) return '₹${(n / 1000).toStringAsFixed(1)}k';
-    return '₹${n.toStringAsFixed(0)}';
+  String _fmtAmount(double n, String sym) {
+    if (n >= 1000) return '$sym${(n / 1000).toStringAsFixed(1)}k';
+    return '$sym${n.toStringAsFixed(0)}';
   }
 
   @override
   Widget build(BuildContext context) {
     final room = context.watch<RoomProvider>().room!;
+    final sym = context.read<RoomProvider>().currencySymbol;
     final user = context.watch<AuthProvider>().user;
     final expenses = context.watch<ExpenseProvider>().expenses;
     final pendingCount = expenses.where((e) => e.isPending).length;
@@ -347,7 +348,7 @@ class _DashboardTab extends StatelessWidget {
                         Expanded(child: _StatCard(
                           icon: Icons.attach_money,
                           iconColor: AppTheme.teal,
-                          value: _fmtAmount(totalExpenses),
+                          value: _fmtAmount(totalExpenses, sym),
                           label: 'This Month',
                         )),
                         const SizedBox(width: 10),
@@ -389,7 +390,7 @@ class _DashboardTab extends StatelessWidget {
                           icon: Icons.attach_money,
                           iconBg: const Color(0xFFF44336),
                           title: 'Total Expenses',
-                          value: '₹${totalExpenses.toStringAsFixed(0)}',
+                          value: '$sym${totalExpenses.toStringAsFixed(0)}',
                           subtitle: expenses.isNotEmpty
                               ? '${expenses.where((e) => e.isApproved).length} transactions'
                               : 'No expenses yet',
@@ -667,6 +668,7 @@ class _ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     final dateFmt = DateFormat('MMM d');
     final isPending = expense.isPending;
     final isApproved = expense.isApproved;
@@ -699,7 +701,7 @@ class _ExpenseCard extends StatelessWidget {
                 ),
               ),
               Text(
-                '₹${expense.amount.toStringAsFixed(0)}',
+                '$sym${expense.amount.toStringAsFixed(0)}',
                 style: const TextStyle(
                     color: Color(0xFFE53935),
                     fontWeight: FontWeight.bold,

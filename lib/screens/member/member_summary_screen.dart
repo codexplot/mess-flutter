@@ -68,6 +68,8 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
     final electricityShare = memberCount > 0 ? electricity / memberCount : 0.0;
     final waterShare = memberCount > 0 ? water / memberCount : 0.0;
 
+    final sym = context.read<RoomProvider>().currencySymbol;
+
     return RefreshIndicator(
       onRefresh: _load,
       child: SingleChildScrollView(
@@ -104,9 +106,9 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                     isPaid
                         ? 'PAID ✓'
                         : balance > 0
-                            ? 'You Owe ₹${balance.toStringAsFixed(2)}'
+                            ? 'You Owe $sym${balance.toStringAsFixed(2)}'
                             : balance < 0
-                                ? 'You Receive ₹${balance.abs().toStringAsFixed(2)}'
+                                ? 'You Receive $sym${balance.abs().toStringAsFixed(2)}'
                                 : 'Settled Up!',
                     style: const TextStyle(
                         color: Colors.white,
@@ -116,9 +118,9 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _Chip('Share: ₹${myShare.toStringAsFixed(0)}'),
+                      _Chip('Share: $sym${myShare.toStringAsFixed(0)}'),
                       const SizedBox(width: 8),
-                      _Chip('Spent: ₹${myContribution.toStringAsFixed(0)}'),
+                      _Chip('Spent: $sym${myContribution.toStringAsFixed(0)}'),
                       if (isFoodOptOut) ...[
                         const SizedBox(width: 8),
                         _Chip('No Food'),
@@ -145,25 +147,25 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                     const SizedBox(height: 12),
                     if (rent > 0)
                       _BillRow('Rent', rentShare,
-                          '₹${rent.toStringAsFixed(0)} ÷ $memberCount'),
+                          '$sym${rent.toStringAsFixed(0)} ÷ $memberCount'),
                     if (food > 0)
                       isFoodOptOut
                           ? _BillRow('Food', 0, 'Opted out', optOut: true)
                           : _BillRow('Food', foodShare,
-                              '₹${food.toStringAsFixed(0)} ÷ $foodEaters'),
+                              '$sym${food.toStringAsFixed(0)} ÷ $foodEaters'),
                     if (electricity > 0)
                       _BillRow('Electricity', electricityShare,
-                          '₹${electricity.toStringAsFixed(0)} ÷ $memberCount'),
+                          '$sym${electricity.toStringAsFixed(0)} ÷ $memberCount'),
                     if (water > 0)
                       _BillRow('Water', waterShare,
-                          '₹${water.toStringAsFixed(0)} ÷ $memberCount'),
+                          '$sym${water.toStringAsFixed(0)} ÷ $memberCount'),
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text('Your Share',
                             style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('₹${myShare.toStringAsFixed(2)}',
+                        Text('$sym${myShare.toStringAsFixed(2)}',
                             style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.navy,
@@ -176,7 +178,7 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                       children: [
                         const Text('- Your Contributions',
                             style: TextStyle(color: AppTheme.textSecondary)),
-                        Text('₹${myContribution.toStringAsFixed(2)}',
+                        Text('$sym${myContribution.toStringAsFixed(2)}',
                             style: const TextStyle(color: AppTheme.success)),
                       ],
                     ),
@@ -188,8 +190,8 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                             style: TextStyle(fontWeight: FontWeight.bold)),
                         Text(
                           balance >= 0
-                              ? '₹${balance.toStringAsFixed(2)}'
-                              : '-₹${balance.abs().toStringAsFixed(2)}',
+                              ? '$sym${balance.toStringAsFixed(2)}'
+                              : '-$sym${balance.abs().toStringAsFixed(2)}',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: balance > 0
@@ -253,16 +255,16 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                           ],
                         ],
                       ),
-                      subtitle: Text('Spent: ₹${contribution.toStringAsFixed(0)}'),
+                      subtitle: Text('Spent: $sym${contribution.toStringAsFixed(0)}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           mPaid
                               ? const _PayChip('PAID', AppTheme.success)
                               : bal > 0
-                                  ? _PayChip('Pay ₹${bal.toStringAsFixed(0)}', AppTheme.error)
+                                  ? _PayChip('Pay $sym${bal.toStringAsFixed(0)}', AppTheme.error)
                                   : bal < 0
-                                      ? _PayChip('Get ₹${bal.abs().toStringAsFixed(0)}', AppTheme.teal)
+                                      ? _PayChip('Get $sym${bal.abs().toStringAsFixed(0)}', AppTheme.teal)
                                       : const _PayChip('Settled', AppTheme.textSecondary),
                           IconButton(
                             icon: Icon(
@@ -308,7 +310,7 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                               children: [
                                 const Text('Share',
                                     style: TextStyle(color: AppTheme.textSecondary)),
-                                Text('₹${share.toStringAsFixed(2)}',
+                                Text('$sym${share.toStringAsFixed(2)}',
                                     style: const TextStyle(fontWeight: FontWeight.bold)),
                               ],
                             ),
@@ -317,7 +319,7 @@ class _MemberSummaryScreenState extends State<MemberSummaryScreen> {
                               children: [
                                 const Text('Contributed',
                                     style: TextStyle(color: AppTheme.textSecondary)),
-                                Text('₹${contribution.toStringAsFixed(2)}',
+                                Text('$sym${contribution.toStringAsFixed(2)}',
                                     style: const TextStyle(color: AppTheme.success)),
                               ],
                             ),
@@ -345,6 +347,7 @@ class _BillRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -356,7 +359,7 @@ class _BillRow extends StatelessWidget {
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
           const SizedBox(width: 8),
           Text(
-            optOut ? 'Opted out' : '₹${amount.toStringAsFixed(2)}',
+            optOut ? 'Opted out' : '$sym${amount.toStringAsFixed(2)}',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: optOut ? AppTheme.textSecondary : AppTheme.textPrimary),
@@ -377,6 +380,7 @@ class _BillRowSmall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -390,7 +394,7 @@ class _BillRowSmall extends StatelessWidget {
                   color: AppTheme.textSecondary, fontSize: 11)),
           const SizedBox(width: 8),
           Text(
-            optOut ? 'opted out' : '₹${amount.toStringAsFixed(0)}',
+            optOut ? 'opted out' : '$sym${amount.toStringAsFixed(0)}',
             style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,

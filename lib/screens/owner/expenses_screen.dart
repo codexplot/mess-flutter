@@ -6,6 +6,7 @@ import '../../providers/room_provider.dart';
 import '../../models/expense.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
+import '../member/submit_expense_screen.dart';
 
 class ExpensesScreen extends StatefulWidget {
   final VoidCallback? onGoBack;
@@ -35,111 +36,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     super.dispose();
   }
 
-  void _showAddExpense() {
-    final room = context.read<RoomProvider>().room;
-    if (room == null) return;
-    final memberCtrl = ValueNotifier<String?>(
-        room.members.isNotEmpty ? room.members.first.id : null);
-    final amountCtrl = TextEditingController();
-    final shopCtrl = TextEditingController();
-    final commentCtrl = TextEditingController();
-    DateTime selectedDate = DateTime.now();
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) {
-        bool loading = false;
-        return StatefulBuilder(builder: (ctx, setS) {
-          return Padding(
-            padding: EdgeInsets.fromLTRB(
-                24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Add Expense for Member',
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: memberCtrl.value,
-                    decoration: const InputDecoration(labelText: 'Member'),
-                    items: room.members
-                        .map((m) =>
-                            DropdownMenuItem(value: m.id, child: Text(m.name)))
-                        .toList(),
-                    onChanged: (v) => memberCtrl.value = v,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: amountCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                        labelText: 'Amount (₹)',
-                        prefixIcon: Icon(Icons.currency_rupee)),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: shopCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Shop / Description',
-                        prefixIcon: Icon(Icons.store_outlined)),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: commentCtrl,
-                    decoration: const InputDecoration(
-                        labelText: 'Category / Comments (optional)',
-                        prefixIcon: Icon(Icons.label_outline)),
-                  ),
-                  const SizedBox(height: 20),
-                  LoadingButton(
-                    loading: loading,
-                    onPressed: () async {
-                      final amt = double.tryParse(amountCtrl.text);
-                      if (amt == null || shopCtrl.text.isEmpty) {
-                        showSnack(context, 'Fill all required fields',
-                            error: true);
-                        return;
-                      }
-                      setS(() => loading = true);
-                      final ok =
-                          await context.read<ExpenseProvider>().ownerAddExpense(
-                                memberId: memberCtrl.value!,
-                                amount: amt,
-                                shopName: shopCtrl.text.trim(),
-                                date: selectedDate,
-                                comments: commentCtrl.text.trim(),
-                              );
-                      setS(() => loading = false);
-                      if (ok && context.mounted) {
-                        context.read<RoomProvider>().fetchSummary();
-                      }
-                      if (context.mounted) Navigator.pop(ctx);
-                      if (context.mounted) {
-                        showSnack(
-                          context,
-                          ok
-                              ? 'Expense added!'
-                              : (context.read<ExpenseProvider>().error ??
-                                  'Failed'),
-                          error: !ok,
-                        );
-                      }
-                    },
-                    label: 'Add Expense',
-                  ),
-                ],
-              ),
-            ),
-          );
-        });
-      },
-    );
+  void _goToAddExpense() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubmitExpenseScreen()),
+    ).then((_) {
+      context.read<ExpenseProvider>().fetchExpenses();
+      context.read<RoomProvider>().fetchSummary();
+    });
   }
 
   List<Expense> _getList(ExpenseProvider prov) {
@@ -170,7 +74,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     return Scaffold(
       backgroundColor: AppTheme.navy,
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddExpense,
+        onPressed: _goToAddExpense,
         backgroundColor: AppTheme.teal,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),

@@ -128,6 +128,12 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
+  void clear() {
+    _expenses = [];
+    _error = null;
+    notifyListeners();
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();

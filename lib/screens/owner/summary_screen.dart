@@ -276,6 +276,7 @@ class _TotalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     return _Card(
       child: Column(
         children: [
@@ -284,7 +285,7 @@ class _TotalCard extends StatelessWidget {
                   TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
           const SizedBox(height: 8),
           Text(
-            '₹${total.toStringAsFixed(0)}',
+            '$sym${total.toStringAsFixed(0)}',
             style: const TextStyle(
                 fontSize: 36,
                 fontWeight: FontWeight.bold,
@@ -298,7 +299,7 @@ class _TotalCard extends StatelessWidget {
               Expanded(
                 child: _StatItem(
                   label: 'Per Person',
-                  value: '₹${perPerson.toStringAsFixed(0)}',
+                  value: '$sym${perPerson.toStringAsFixed(0)}',
                 ),
               ),
               Container(
@@ -348,6 +349,7 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -365,7 +367,7 @@ class _CategoryRow extends StatelessWidget {
                     color: AppTheme.textPrimary, fontSize: 14)),
           ),
           Text(
-            '₹${data.value.toStringAsFixed(0)}',
+            '$sym${data.value.toStringAsFixed(0)}',
             style: const TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -392,6 +394,7 @@ class _ContributionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sym = context.read<RoomProvider>().currencySymbol;
     final name = data['name'] ?? '';
     final contribution = (data['contribution'] ?? 0).toDouble();
     final share = (data['perPersonShare'] ?? 0).toDouble();
@@ -412,7 +415,7 @@ class _ContributionRow extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textPrimary,
                       fontSize: 14)),
-              Text('₹${contribution.toStringAsFixed(0)}',
+              Text('$sym${contribution.toStringAsFixed(0)}',
                   style: const TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 14)),
@@ -440,8 +443,8 @@ class _ContributionRow extends StatelessWidget {
               ),
               Text(
                 delta >= 0
-                    ? '+₹${delta.toStringAsFixed(0)}'
-                    : '-₹${delta.abs().toStringAsFixed(0)}',
+                    ? '+$sym${delta.toStringAsFixed(0)}'
+                    : '-$sym${delta.abs().toStringAsFixed(0)}',
                 style: TextStyle(
                   color: delta >= 0 ? AppTheme.success : AppTheme.error,
                   fontSize: 11,

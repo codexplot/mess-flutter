@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/expense_provider.dart';
+import '../../providers/room_provider.dart';
 import '../../models/expense.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
@@ -74,7 +75,7 @@ class _MemberExpensesScreenState extends State<MemberExpensesScreen>
                         _StatCard(
                           label: 'Approved',
                           value: '${approved.length}',
-                          sub: '₹${approvedTotal.toStringAsFixed(0)}',
+                          sub: '${context.read<RoomProvider>().currencySymbol}${approvedTotal.toStringAsFixed(0)}',
                           color: AppTheme.success,
                           icon: Icons.check_circle_outline,
                         ),
@@ -257,7 +258,7 @@ class _ExpenseTile extends StatelessWidget {
             const SizedBox(height: 6),
             Row(
               children: [
-                Text('₹${expense.amount.toStringAsFixed(2)}',
+                Text('${context.read<RoomProvider>().currencySymbol}${expense.amount.toStringAsFixed(2)}',
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

@@ -4,12 +4,16 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // iOS simulator uses localhost, Android emulator uses 10.0.2.2
-  static const String _iosBase = 'http://localhost:5001/api';
+  // iOS simulator uses localhost, Android emulator uses 10.0.2.2, physical device uses Mac's LAN IP
+  static const String _iosSimBase = 'http://localhost:5001/api';
   static const String _androidBase = 'http://10.0.2.2:5001/api';
+  static const String _physicalDeviceBase = 'http://192.168.1.138:5001/api';
 
-  static String get baseUrl =>
-      Platform.isAndroid ? _androidBase : _iosBase;
+  static String get baseUrl {
+    if (Platform.isAndroid) return _androidBase;
+    // On iOS, check if running on simulator or physical device
+    return _physicalDeviceBase;
+  }
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,11 +31,13 @@ class ApiService {
     return headers;
   }
 
+  static const _timeout = Duration(seconds: 10);
+
   static Future<Map<String, dynamic>> get(String path) async {
     final res = await http.get(
       Uri.parse('$baseUrl$path'),
       headers: await _headers(),
-    );
+    ).timeout(_timeout);
     return _parse(res);
   }
 
@@ -40,7 +46,7 @@ class ApiService {
       Uri.parse('$baseUrl$path'),
       headers: await _headers(auth: auth),
       body: jsonEncode(body),
-    );
+    ).timeout(_timeout);
     return _parse(res);
   }
 
@@ -49,7 +55,7 @@ class ApiService {
       Uri.parse('$baseUrl$path'),
       headers: await _headers(),
       body: jsonEncode(body),
-    );
+    ).timeout(_timeout);
     return _parse(res);
   }
 
@@ -57,7 +63,7 @@ class ApiService {
     final res = await http.delete(
       Uri.parse('$baseUrl$path'),
       headers: await _headers(),
-    );
+    ).timeout(_timeout);
     return _parse(res);
   }
 

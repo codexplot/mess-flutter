@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/room_provider.dart';
+import '../../providers/expense_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
 import '../../widgets/common.dart';
@@ -29,7 +31,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
+            onPressed: () => context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>()),
           ),
         ],
       ),

@@ -53,6 +53,9 @@ class Room {
   final String billingMonth;
   final String address;
   final String location;
+  final String currencyCode;
+  final String currencySymbol;
+  final String currencyName;
 
   Room({
     required this.id,
@@ -68,6 +71,9 @@ class Room {
     required this.billingMonth,
     this.address = '',
     this.location = '',
+    this.currencyCode = 'INR',
+    this.currencySymbol = '₹',
+    this.currencyName = 'Indian Rupee',
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -117,6 +123,9 @@ class Room {
       billingMonth: json['billingMonth'] ?? '',
       address: json['address'] ?? '',
       location: json['location'] ?? '',
+      currencyCode: (json['currency'] is Map) ? (json['currency']['code'] ?? 'INR') : 'INR',
+      currencySymbol: (json['currency'] is Map) ? (json['currency']['symbol'] ?? '₹') : '₹',
+      currencyName: (json['currency'] is Map) ? (json['currency']['name'] ?? 'Indian Rupee') : 'Indian Rupee',
     );
   }
 }
