@@ -368,12 +368,14 @@ class _DashboardTab extends StatelessWidget {
                           )),
                           const SizedBox(width: 10),
                           Expanded(child: GestureDetector(
-                            onTap: onGoToExpenses,
+                            onTap: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const MonthlyBillsScreen()))
+                                .then((_) => context.read<RoomProvider>().fetchRoom()),
                             child: _StatCard(
-                              icon: Icons.mark_email_unread_outlined,
-                              iconColor: AppTheme.warning,
-                              value: '$pendingCount',
-                              label: 'Pending',
+                              icon: Icons.receipt_long_outlined,
+                              iconColor: const Color(0xFFFFD580),
+                              value: _fmtAmount(room.monthlyBills.total, sym),
+                              label: 'Fixed Bills',
                             ),
                           )),
                           const SizedBox(width: 10),
@@ -484,15 +486,15 @@ class _DashboardTab extends StatelessWidget {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: onGoToSummary,
+                            onTap: onGoToMembers,
                             child: _SummaryCard(
-                              icon: Icons.payments_outlined,
-                              iconBg: const Color(0xFFF44336),
-                              title: 'Total Expenses',
-                              value: '$sym${totalExpenses.toStringAsFixed(0)}',
-                              subtitle: expenses.isNotEmpty
-                                  ? '${expenses.where((e) => e.isApproved).length} transactions'
-                                  : 'No expenses yet',
+                              icon: Icons.how_to_reg_outlined,
+                              iconBg: AppTheme.success,
+                              title: 'Members Paid',
+                              value: '${room.paidMembers.length} / ${room.members.length}',
+                              subtitle: room.paidMembers.length == room.members.length
+                                  ? 'All settled ✓'
+                                  : '${room.members.length - room.paidMembers.length} remaining',
                             ),
                           ),
                         ),
@@ -505,7 +507,7 @@ class _DashboardTab extends StatelessWidget {
                               iconBg: AppTheme.warning,
                               title: 'Pending\nApprovals',
                               value: '$pendingCount',
-                              subtitle: null,
+                              subtitle: pendingCount == 0 ? 'All reviewed ✓' : 'Needs review',
                             ),
                           ),
                         ),
