@@ -30,7 +30,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.logout),
-              onPressed: () => context.read<AuthProvider>().logout(),
+              onPressed: () => context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>()),
             ),
           ],
         ),
@@ -96,7 +96,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
+            onPressed: () => context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>()),
           ),
         ],
       ),
@@ -131,7 +131,10 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
       ),
       builder: (_) => ChangeNotifierProvider.value(
         value: context.read<AuthProvider>(),
-        child: _ProfileInfoSheet(user: context.read<AuthProvider>().user),
+        child: _ProfileInfoSheet(
+          user: context.read<AuthProvider>().user,
+          room: context.read<RoomProvider>().room,
+        ),
       ),
     );
   }
@@ -1086,7 +1089,8 @@ class _MemberInfoRow extends StatelessWidget {
 
 class _ProfileInfoSheet extends StatefulWidget {
   final dynamic user;
-  const _ProfileInfoSheet({required this.user});
+  final dynamic room;
+  const _ProfileInfoSheet({required this.user, this.room});
 
   @override
   State<_ProfileInfoSheet> createState() => _ProfileInfoSheetState();
@@ -1209,6 +1213,29 @@ class _ProfileInfoSheetState extends State<_ProfileInfoSheet> {
               label: 'Address',
               value: user?.address?.isNotEmpty == true ? user!.address! : 'Not set',
             ),
+          ],
+          if (widget.room != null && widget.room.ownerName.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 12),
+            const Text(
+              'Room Info',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 10),
+            _InfoRow(
+              icon: Icons.person_outline,
+              label: 'Room Owner',
+              value: widget.room.ownerName,
+            ),
+            if (widget.room.ownerEmail.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _InfoRow(
+                icon: Icons.email_outlined,
+                label: 'Owner Email',
+                value: widget.room.ownerEmail,
+              ),
+            ],
           ],
           const SizedBox(height: 8),
         ],

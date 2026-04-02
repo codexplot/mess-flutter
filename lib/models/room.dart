@@ -44,6 +44,8 @@ class Room {
   final String name;
   final String roomCode;
   final String ownerId;
+  final String ownerName;
+  final String ownerEmail;
   final List<RoomMember> members;
   final List<String> paidMembers;
   final List<String> foodOptOut;
@@ -55,6 +57,8 @@ class Room {
     required this.name,
     required this.roomCode,
     required this.ownerId,
+    this.ownerName = '',
+    this.ownerEmail = '',
     required this.members,
     required this.paidMembers,
     required this.foodOptOut,
@@ -65,6 +69,8 @@ class Room {
   factory Room.fromJson(Map<String, dynamic> json) {
     final owner = json['owner'];
     String ownerId = owner is Map ? (owner['_id'] ?? '') : (owner ?? '');
+    String ownerName = owner is Map ? (owner['name'] ?? '') : '';
+    String ownerEmail = owner is Map ? (owner['email'] ?? '') : '';
 
     List<RoomMember> members = [];
     if (json['members'] is List) {
@@ -96,6 +102,8 @@ class Room {
       name: json['name'] ?? '',
       roomCode: json['roomCode'] ?? '',
       ownerId: ownerId,
+      ownerName: ownerName,
+      ownerEmail: ownerEmail,
       members: members,
       paidMembers: paidMembers,
       foodOptOut: foodOptOut,
