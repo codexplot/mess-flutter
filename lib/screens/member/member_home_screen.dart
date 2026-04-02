@@ -969,44 +969,6 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
               );
             }),
             const SizedBox(height: 16),
-
-            // Quick actions
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await widget.onAddExpense();
-                      _load();
-                    },
-                    icon: const Icon(Icons.add_circle_outline),
-                    label: const Text('Add Expense'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onMyExpenses,
-                    icon: const Icon(Icons.list_alt_outlined),
-                    label: const Text('My Expenses'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.navy,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
