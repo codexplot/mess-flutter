@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import 'room_provider.dart';
+import 'expense_provider.dart';
 
 class AuthProvider extends ChangeNotifier {
   User? _user;
@@ -74,7 +76,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {RoomProvider? roomProvider, ExpenseProvider? expenseProvider}) async {
     _loading = true;
     _error = null;
     notifyListeners();
@@ -88,6 +90,8 @@ class AuthProvider extends ChangeNotifier {
         final data = res['data'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
+        roomProvider?.clear();
+        expenseProvider?.clear();
         _user = User.fromJson(data['user']);
         _loading = false;
         notifyListeners();
@@ -106,7 +110,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> register(String name, String email, String password, {String? roomCode}) async {
+  Future<bool> register(String name, String email, String password, {String? roomCode, RoomProvider? roomProvider, ExpenseProvider? expenseProvider}) async {
     _loading = true;
     _error = null;
     notifyListeners();
@@ -123,6 +127,8 @@ class AuthProvider extends ChangeNotifier {
         final data = res['data'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', data['token']);
+        roomProvider?.clear();
+        expenseProvider?.clear();
         _user = User.fromJson(data['user']);
         _loading = false;
         notifyListeners();
@@ -141,26 +147,43 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateProfile({String? phone, String? address}) async {
+  Future<String?> updateProfile({String? name, String? email, String? phone, String? address}) async {
     try {
-      final res = await ApiService.put('/auth/profile', {
-        'phone': phone,
-        'address': address,
-      });
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (email != null) body['email'] = email;
+      if (phone != null) body['phone'] = phone;
+      if (address != null) body['address'] = address;
+      final res = await ApiService.put('/auth/profile', body);
       if (res['success']) {
         _user = User.fromJson(res['data']['user']);
         notifyListeners();
-        return true;
+        return null;
       }
-      return false;
-    } catch (_) {
-      return false;
+      return res['message'] ?? 'Update failed';
+    } catch (e) {
+      return e.toString();
     }
   }
 
-  Future<void> logout() async {
+  Future<String?> changePassword(String currentPassword, String newPassword) async {
+    try {
+      final res = await ApiService.put('/auth/change-password', {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      });
+      if (res['success']) return null;
+      return res['message'] ?? 'Failed to change password';
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  Future<void> logout({RoomProvider? roomProvider, ExpenseProvider? expenseProvider}) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+    roomProvider?.clear();
+    expenseProvider?.clear();
     _user = null;
     notifyListeners();
   }

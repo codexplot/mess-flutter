@@ -834,13 +834,13 @@ class _ProfileInfoSheetState extends State<_ProfileInfoSheet> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    final ok = await context.read<AuthProvider>().updateProfile(
+    final error = await context.read<AuthProvider>().updateProfile(
           phone: _phoneCtrl.text.trim(),
           address: _addressCtrl.text.trim(),
         );
     setState(() {
       _saving = false;
-      if (ok) _editing = false;
+      if (error == null) _editing = false;
     });
   }
 

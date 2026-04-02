@@ -8,6 +8,7 @@ import '../../widgets/common.dart';
 import 'member_expenses_screen.dart';
 import 'submit_expense_screen.dart';
 import 'member_summary_screen.dart';
+import 'profile_screen.dart';
 
 class MemberHomeScreen extends StatefulWidget {
   const MemberHomeScreen({super.key});
@@ -132,19 +133,9 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
   }
 
   void _showProfileInfo(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => ChangeNotifierProvider.value(
-        value: context.read<AuthProvider>(),
-        child: _ProfileInfoSheet(
-          user: context.read<AuthProvider>().user,
-          room: context.read<RoomProvider>().room,
-        ),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
     );
   }
 }
@@ -1420,13 +1411,13 @@ class _ProfileInfoSheetState extends State<_ProfileInfoSheet> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    final ok = await context.read<AuthProvider>().updateProfile(
+    final error = await context.read<AuthProvider>().updateProfile(
           phone: _phoneCtrl.text.trim(),
           address: _addressCtrl.text.trim(),
         );
     setState(() {
       _saving = false;
-      if (ok) _editing = false;
+      if (error == null) _editing = false;
     });
   }
 
