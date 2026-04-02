@@ -106,12 +106,15 @@ class _MemberExpensesScreenState extends State<MemberExpensesScreen>
                   // Filter tabs
                   TabBar(
                     controller: _tabCtrl,
-                    isScrollable: false,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: const TextStyle(fontSize: 13),
                     tabs: [
-                      Tab(text: 'All (${expenses.length})'),
-                      Tab(text: 'Pending (${pending.length})'),
-                      Tab(text: 'Approved (${approved.length})'),
-                      Tab(text: 'Rejected (${rejected.length})'),
+                      Tab(text: 'All  ${expenses.length}'),
+                      Tab(text: 'Pending  ${pending.length}'),
+                      Tab(text: 'Approved  ${approved.length}'),
+                      Tab(text: 'Rejected  ${rejected.length}'),
                     ],
                   ),
                   Expanded(
