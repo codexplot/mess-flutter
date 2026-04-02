@@ -166,6 +166,8 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
   bool _loading = true;
   String? _expandedMember;
   String? _expandedExpenses;
+  String? _selectedMonth; // null = current billing month
+  List<String> _availableMonths = [];
 
   @override
   void initState() {
@@ -173,10 +175,75 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({String? month}) async {
     setState(() => _loading = true);
-    _summary = await context.read<RoomProvider>().fetchMemberSummary();
+    _summary = await context.read<RoomProvider>().fetchMemberSummary(month: month ?? _selectedMonth);
+    if (_availableMonths.isEmpty) {
+      _availableMonths = await context.read<RoomProvider>().fetchAvailableMonths();
+    }
     setState(() => _loading = false);
+  }
+
+  void _showMonthPicker(BuildContext context, String currentMonth) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Select Month',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.navy)),
+            const SizedBox(height: 16),
+            ..._availableMonths.map((m) {
+              final isSelected = m == (_selectedMonth ?? currentMonth);
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.calendar_month,
+                  color: isSelected ? AppTheme.teal : AppTheme.textSecondary,
+                ),
+                title: Text(
+                  _formatMonth(m),
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? AppTheme.teal : AppTheme.textPrimary,
+                  ),
+                ),
+                trailing: isSelected
+                    ? const Icon(Icons.check_circle, color: AppTheme.teal)
+                    : null,
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedMonth = m;
+                    _expandedMember = null;
+                    _expandedExpenses = null;
+                  });
+                  _load(month: m);
+                },
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatMonth(String yyyyMM) {
+    try {
+      final parts = yyyyMM.split('-');
+      final year = int.parse(parts[0]);
+      final mon = int.parse(parts[1]);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return '${months[mon - 1]} $year';
+    } catch (_) {
+      return yyyyMM;
+    }
   }
 
   void _showRoomInfo(BuildContext context, {
@@ -367,6 +434,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
     final roomLocation = room['location'] ?? '';
     final ownerName = room['ownerName'] ?? '';
     final ownerEmail = room['ownerEmail'] ?? '';
+    final viewedMonth = room['viewedMonth'] ?? billingMonth;
     final totalRoomExpense = (_summary!['totalRoomExpense'] ?? 0).toDouble();
     final perPersonShare = (_summary!['perPersonShare'] ?? 0).toDouble();
     final myContribution = (_summary!['myContribution'] ?? 0).toDouble();
@@ -442,14 +510,36 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                                     color: Colors.white70, fontSize: 13)),
                             const Spacer(),
                           ],
-                          if (billingMonth.isNotEmpty) ...[
-                            const Icon(Icons.calendar_today,
-                                color: Colors.white54, size: 14),
-                            const SizedBox(width: 4),
-                            Text(billingMonth,
-                                style: const TextStyle(
-                                    color: Colors.white70, fontSize: 13)),
-                          ],
+                          // Tappable month chip
+                          GestureDetector(
+                            onTap: () => _showMonthPicker(context, billingMonth),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.18),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.white30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.calendar_today,
+                                      color: Colors.white70, size: 13),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    _formatMonth(_selectedMonth ?? billingMonth),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.arrow_drop_down,
+                                      color: Colors.white70, size: 16),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],

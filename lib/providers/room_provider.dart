@@ -177,12 +177,23 @@ class RoomProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> fetchMemberSummary() async {
+  Future<Map<String, dynamic>?> fetchMemberSummary({String? month}) async {
     try {
-      final res = await ApiService.get('/rooms/my-summary');
+      final path = month != null ? '/rooms/my-summary?month=$month' : '/rooms/my-summary';
+      final res = await ApiService.get(path);
       if (res['success']) return res['data'];
     } catch (_) {}
     return null;
+  }
+
+  Future<List<String>> fetchAvailableMonths() async {
+    try {
+      final res = await ApiService.get('/rooms/available-months');
+      if (res['success']) {
+        return List<String>.from(res['data']['months'] ?? []);
+      }
+    } catch (_) {}
+    return [];
   }
 
   void clear() {
