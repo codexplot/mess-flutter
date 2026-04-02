@@ -101,7 +101,7 @@ class _MemberHomeScreenState extends State<MemberHomeScreen> {
         title: const Text('RoomMess'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.info_outline),
+            icon: const Icon(Icons.account_circle_outlined),
             onPressed: () => _showProfileInfo(context),
           ),
           IconButton(
