@@ -447,14 +447,14 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
       ((_summary!['memberSummary'] as List?) ?? []).map((e) => Map<String, dynamic>.from(e as Map)),
     );
     rawMembers.sort((a, b) {
-      final aIsMe = (a['isMe'] ?? false) as bool;
-      final bIsMe = (b['isMe'] ?? false) as bool;
       final aIsOwner = (a['isOwner'] ?? false) as bool;
       final bIsOwner = (b['isOwner'] ?? false) as bool;
-      if (aIsMe) return -1;
-      if (bIsMe) return 1;
+      final aIsMe = (a['isMe'] ?? false) as bool;
+      final bIsMe = (b['isMe'] ?? false) as bool;
       if (aIsOwner) return -1;
       if (bIsOwner) return 1;
+      if (aIsMe) return -1;
+      if (bIsMe) return 1;
       return 0;
     });
     final members = rawMembers;
