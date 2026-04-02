@@ -441,6 +441,7 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
               final mId = m['_id'] ?? '';
               final name = m['name'] ?? '';
               final isMe = m['isMe'] ?? false;
+              final isOwner = m['isOwner'] ?? false;
               final mEatsFood = m['eatsFood'] ?? true;
               final contribution = (m['contribution'] ?? 0).toDouble();
               final share = (m['perPersonShare'] ?? 0).toDouble();
@@ -452,21 +453,26 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
-                color: isMe ? AppTheme.teal.withOpacity(0.05) : null,
+                color: isOwner
+                    ? AppTheme.navy.withOpacity(0.05)
+                    : isMe ? AppTheme.teal.withOpacity(0.05) : null,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                   side: BorderSide(
-                    color: isMe
-                        ? AppTheme.teal.withOpacity(0.3)
-                        : Colors.grey.withOpacity(0.15),
+                    color: isOwner
+                        ? AppTheme.navy.withOpacity(0.3)
+                        : isMe
+                            ? AppTheme.teal.withOpacity(0.3)
+                            : Colors.grey.withOpacity(0.15),
                   ),
                 ),
                 child: Column(
                   children: [
                     ListTile(
                       leading: CircleAvatar(
-                        backgroundColor:
-                            isMe ? AppTheme.teal : Colors.grey.shade400,
+                        backgroundColor: isOwner
+                            ? AppTheme.navy
+                            : isMe ? AppTheme.teal : Colors.grey.shade400,
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : '?',
                           style: const TextStyle(
@@ -484,11 +490,27 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (isOwner) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.navy.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text('Owner',
+                                  style: TextStyle(
+                                      color: AppTheme.navy,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600)),
+                            ),
+                          ],
                         ],
                       ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (!isOwner)
                           Text('Spent: ₹${contribution.toStringAsFixed(0)}',
                               style: const TextStyle(fontSize: 12)),
                           if (!mEatsFood)
@@ -508,7 +530,9 @@ class _MemberDashboardTabState extends State<_MemberDashboardTab> {
                             ),
                         ],
                       ),
-                      trailing: Row(
+                      trailing: isOwner
+                          ? null
+                          : Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _StatusBadge(status: mStatus, balance: bal),
