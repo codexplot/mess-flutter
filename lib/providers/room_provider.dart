@@ -178,11 +178,48 @@ class RoomProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchSummary() async {
+  Future<bool> partialPay(String memberId, double amount) async {
+    try {
+      final res = await ApiService.put('/rooms/members/$memberId/partial-pay', {'amount': amount});
+      if (res['success']) {
+        await fetchRoom();
+        await fetchSummary();
+        return true;
+      }
+      _error = res['message'];
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> clearPartialPay(String memberId) async {
+    try {
+      final res = await ApiService.delete('/rooms/members/$memberId/partial-pay');
+      if (res['success']) {
+        await fetchRoom();
+        await fetchSummary();
+        return true;
+      }
+      _error = res['message'];
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> fetchSummary({String? month}) async {
     _loading = true;
     notifyListeners();
     try {
-      final res = await ApiService.get('/rooms/summary');
+      final path = month != null ? '/rooms/summary?month=$month' : '/rooms/summary';
+      final res = await ApiService.get(path);
       if (res['success']) {
         _summary = res['data'];
       } else {
@@ -193,6 +230,16 @@ class RoomProvider extends ChangeNotifier {
     }
     _loading = false;
     notifyListeners();
+  }
+
+  Future<List<String>> fetchSummaryMonths() async {
+    try {
+      final res = await ApiService.get('/rooms/summary-months');
+      if (res['success']) {
+        return List<String>.from(res['data']['months'] ?? []);
+      }
+    } catch (_) {}
+    return [];
   }
 
   Future<Map<String, dynamic>?> fetchMemberSummary({String? month}) async {
@@ -209,6 +256,16 @@ class RoomProvider extends ChangeNotifier {
           notifyListeners();
         }
         return data;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> fetchCarryForwardHistory() async {
+    try {
+      final res = await ApiService.get('/rooms/carry-forward');
+      if (res['success'] == true) {
+        return res['data'] as Map<String, dynamic>;
       }
     } catch (_) {}
     return null;

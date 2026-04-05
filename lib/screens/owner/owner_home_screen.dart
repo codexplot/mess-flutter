@@ -7,12 +7,13 @@ import '../../providers/room_provider.dart';
 import '../../providers/expense_provider.dart';
 import '../../models/expense.dart';
 import '../../theme.dart';
-import '../../widgets/common.dart';
 import 'room_setup_screen.dart';
 import 'members_screen.dart';
 import 'expenses_screen.dart';
 import 'summary_screen.dart';
 import 'monthly_bills_screen.dart';
+import 'carry_forward_screen.dart';
+import '../member/profile_screen.dart';
 
 class OwnerHomeScreen extends StatefulWidget {
   const OwnerHomeScreen({super.key});
@@ -60,6 +61,7 @@ class _OwnerHomeScreenState extends State<OwnerHomeScreen> {
       ExpensesScreen(onGoBack: null),
       const MembersScreen(),
       const SummaryScreen(),
+      const CarryForwardScreen(),
     ];
 
     return Scaffold(
@@ -104,6 +106,7 @@ class _BottomNav extends StatelessWidget {
               _NavItem(icon: Icons.receipt_long_outlined, activeIcon: Icons.receipt_long, label: 'Expenses', index: 1, currentIndex: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.people_outline, activeIcon: Icons.people, label: 'Members', index: 2, currentIndex: currentIndex, onTap: onTap),
               _NavItem(icon: Icons.pie_chart_outline, activeIcon: Icons.pie_chart, label: 'Summary', index: 3, currentIndex: currentIndex, onTap: onTap),
+              _NavItem(icon: Icons.history_edu_outlined, activeIcon: Icons.history_edu, label: 'Carry Fwd', index: 4, currentIndex: currentIndex, onTap: onTap),
             ],
           ),
         ),
@@ -251,68 +254,18 @@ class _DashboardTab extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            const Icon(Icons.notifications_outlined,
-                                color: Colors.white, size: 26),
-                            if (pendingCount > 0)
-                              Positioned(
-                                top: -1,
-                                right: -1,
-                                child: Container(
-                                  width: 9,
-                                  height: 9,
-                                  decoration: const BoxDecoration(
-                                      color: Colors.red,
-                                      shape: BoxShape.circle),
-                                ),
-                              ),
-                          ],
+                        IconButton(
+                          icon: const Icon(Icons.account_circle_outlined,
+                              color: Colors.white, size: 26),
+                          onPressed: () => _showProfileInfo(context),
                         ),
-                        const SizedBox(width: 12),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert,
-                              color: Colors.white, size: 22),
-                          onSelected: (v) {
-                            if (v == 'bills') {
-                              Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const MonthlyBillsScreen()));
-                            } else if (v == 'room-details') {
-                              _showEditRoomDetails(context);
-                            } else if (v == 'profile') {
-                              _showProfileInfo(context);
-                            } else if (v == 'logout') {
-                              context.read<AuthProvider>().logout(roomProvider: context.read<RoomProvider>(), expenseProvider: context.read<ExpenseProvider>());
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'bills', child: Text('Monthly Bills')),
-                            PopupMenuItem(
-                              value: 'room-details',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit_location_alt_outlined, size: 18, color: Colors.black87),
-                                  SizedBox(width: 8),
-                                  Text('Room Details'),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'profile',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.info_outline, size: 18, color: Colors.black87),
-                                  SizedBox(width: 8),
-                                  Text('My Info'),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(value: 'logout', child: Text('Logout')),
-                          ],
+                        TextButton(
+                          onPressed: () => context.read<AuthProvider>().logout(
+                              roomProvider: context.read<RoomProvider>(),
+                              expenseProvider: context.read<ExpenseProvider>()),
+                          child: const Text('Logout',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 14)),
                         ),
                       ],
                     ),
@@ -358,28 +311,6 @@ class _DashboardTab extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(child: GestureDetector(
-                            onTap: onGoToExpenses,
-                            child: _StatCard(
-                              icon: Icons.account_balance_wallet_outlined,
-                              iconColor: AppTheme.teal,
-                              value: _fmtAmount(totalExpenses, sym),
-                              label: 'This Month',
-                            ),
-                          )),
-                          const SizedBox(width: 10),
-                          Expanded(child: GestureDetector(
-                            onTap: () => Navigator.push(context,
-                                MaterialPageRoute(builder: (_) => const MonthlyBillsScreen()))
-                                .then((_) => context.read<RoomProvider>().fetchRoom()),
-                            child: _StatCard(
-                              icon: Icons.receipt_long_outlined,
-                              iconColor: const Color(0xFFFFD580),
-                              value: _fmtAmount(room.monthlyBills.total, sym),
-                              label: 'Fixed Bills',
-                            ),
-                          )),
-                          const SizedBox(width: 10),
-                          Expanded(child: GestureDetector(
                             onTap: onGoToMembers,
                             child: _StatCard(
                               icon: Icons.people_outline,
@@ -388,6 +319,18 @@ class _DashboardTab extends StatelessWidget {
                               label: 'Members',
                             ),
                           )),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: GestureDetector(
+                              onTap: onGoToExpenses,
+                              child: _MonthTotalCard(
+                                sym: sym,
+                                membersPurchased: totalExpenses,
+                                fixedBills: room.monthlyBills.total,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -491,10 +434,10 @@ class _DashboardTab extends StatelessWidget {
                               icon: Icons.how_to_reg_outlined,
                               iconBg: AppTheme.success,
                               title: 'Members Paid',
-                              value: '${room.paidMembers.length} / ${room.members.length}',
-                              subtitle: room.paidMembers.length == room.members.length
+                              value: '${room.paidMembers.length} / ${room.members.length + 1}',
+                              subtitle: room.paidMembers.length == room.members.length + 1
                                   ? 'All settled ✓'
-                                  : '${room.members.length - room.paidMembers.length} remaining',
+                                  : '${room.members.length + 1 - room.paidMembers.length} remaining',
                             ),
                           ),
                         ),
@@ -639,14 +582,9 @@ class _DashboardTab extends StatelessWidget {
   }
 
   static void _showProfileInfo(BuildContext context) {
-    final user = context.read<AuthProvider>().user;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _ProfileInfoSheet(user: user),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileScreen()),
     );
   }
 }
@@ -699,6 +637,114 @@ class _StatCard extends StatelessWidget {
               label,
               style: const TextStyle(color: Colors.white60, fontSize: 11),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Month Total Card ─────────────────────────────────────────────────────────
+
+class _MonthTotalCard extends StatelessWidget {
+  final String sym;
+  final double membersPurchased;
+  final double fixedBills;
+
+  const _MonthTotalCard({
+    required this.sym,
+    required this.membersPurchased,
+    required this.fixedBills,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final total = membersPurchased + fixedBills;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF243560),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.bar_chart_outlined, color: AppTheme.teal, size: 18),
+              SizedBox(width: 6),
+              Text('This Month',
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Row breakdown
+          Row(
+            children: [
+              // Member purchases
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Purchased',
+                        style: TextStyle(color: Colors.white38, fontSize: 10)),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text('$sym${membersPurchased.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                  width: 1, height: 30, color: Colors.white12),
+              const SizedBox(width: 10),
+              // Fixed bills
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Fixed Bills',
+                        style: TextStyle(color: Colors.white38, fontSize: 10)),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text('$sym${fixedBills.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                              color: Color(0xFFFFD580),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Divider(color: Colors.white12, height: 14),
+          // Total
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total',
+                  style: TextStyle(color: Colors.white60, fontSize: 11)),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '$sym${total.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -938,162 +984,3 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ─── Profile Info Sheet ───────────────────────────────────────────────────────
-
-class _ProfileInfoSheet extends StatefulWidget {
-  final dynamic user;
-  const _ProfileInfoSheet({required this.user});
-
-  @override
-  State<_ProfileInfoSheet> createState() => _ProfileInfoSheetState();
-}
-
-class _ProfileInfoSheetState extends State<_ProfileInfoSheet> {
-  bool _editing = false;
-  late TextEditingController _phoneCtrl;
-  late TextEditingController _addressCtrl;
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _phoneCtrl = TextEditingController(text: widget.user?.phone ?? '');
-    _addressCtrl = TextEditingController(text: widget.user?.address ?? '');
-  }
-
-  @override
-  void dispose() {
-    _phoneCtrl.dispose();
-    _addressCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    final error = await context.read<AuthProvider>().updateProfile(
-          phone: _phoneCtrl.text.trim(),
-          address: _addressCtrl.text.trim(),
-        );
-    setState(() {
-      _saving = false;
-      if (error == null) _editing = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthProvider>().user;
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24, right: 24, top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppTheme.teal,
-                child: Text(
-                  (user?.name.isNotEmpty == true) ? user!.name[0].toUpperCase() : '?',
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(user?.name ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    Text(user?.role.toUpperCase() ?? '', style: const TextStyle(color: AppTheme.teal, fontSize: 12)),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: Icon(_editing ? Icons.close : Icons.edit_outlined),
-                onPressed: () => setState(() => _editing = !_editing),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 12),
-          _InfoRow(icon: Icons.email_outlined, label: 'Email', value: user?.email ?? ''),
-          const SizedBox(height: 12),
-          if (_editing) ...[
-            TextField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Mobile Number',
-                prefixIcon: Icon(Icons.phone_outlined),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _addressCtrl,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Address',
-                prefixIcon: Icon(Icons.location_on_outlined),
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _saving ? null : _save,
-                child: _saving ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
-              ),
-            ),
-          ] else ...[
-            _InfoRow(
-              icon: Icons.phone_outlined,
-              label: 'Mobile',
-              value: user?.phone?.isNotEmpty == true ? user!.phone! : 'Not set',
-            ),
-            const SizedBox(height: 12),
-            _InfoRow(
-              icon: Icons.location_on_outlined,
-              label: 'Address',
-              value: user?.address?.isNotEmpty == true ? user!.address! : 'Not set',
-            ),
-          ],
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _InfoRow({required this.icon, required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: AppTheme.teal),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
-              Text(value, style: const TextStyle(fontSize: 15, color: AppTheme.textPrimary)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
