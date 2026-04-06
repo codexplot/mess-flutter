@@ -23,19 +23,29 @@ class _CarryForwardScreenState extends State<CarryForwardScreen> {
 
   Future<void> _load() async {
     if (mounted) setState(() => _loading = true);
-    final data = await context.read<RoomProvider>().fetchCarryForwardHistory();
+    final prov = context.read<RoomProvider>();
+    await prov.fetchSummary();
+    final data = await prov.fetchCarryForwardHistory();
     if (mounted) setState(() { _data = data; _loading = false; });
   }
 
   @override
   Widget build(BuildContext context) {
-    final sym = context.read<RoomProvider>().currencySymbol;
+    final prov = context.watch<RoomProvider>();
+    final sym = prov.currencySymbol;
     final totalOutstanding = (_data?['totalOutstanding'] ?? 0.0) as num;
     final membersWithDebt = (_data?['membersWithDebt'] ?? 0) as int;
     final members = (_data?['members'] as List?) ?? [];
     final activeMembers = members
         .where((m) => (m['currentOutstanding'] ?? 0) > 0 || (m['entries'] as List).isNotEmpty)
         .toList();
+
+    // Current month unpaid members from summary
+    final summaryMembers = (prov.summary?['memberSummary'] as List?) ?? [];
+    final unpaidThisMonth = summaryMembers.where((m) {
+      final status = m['status'] as String? ?? '';
+      return status == 'pays' || status == 'partial';
+    }).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.navy,
@@ -129,11 +139,34 @@ class _CarryForwardScreenState extends State<CarryForwardScreen> {
                               const SizedBox(height: 16),
                             ],
 
-                            // Empty state
+                            // ── Current Month Section ────────────────
+                            if (unpaidThisMonth.isNotEmpty) ...[
+                              _SectionHeader(
+                                icon: Icons.calendar_month_outlined,
+                                label: 'This Month — Unpaid',
+                                color: AppTheme.error,
+                              ),
+                              const SizedBox(height: 10),
+                              ...unpaidThisMonth.map((m) => _CurrentMonthMemberCard(
+                                data: m,
+                                sym: sym,
+                                onRefresh: _load,
+                              )),
+                              const SizedBox(height: 20),
+                            ],
+
+                            // ── Carry Forward Section ─────────────────
+                            _SectionHeader(
+                              icon: Icons.history_edu_outlined,
+                              label: 'Carry Forward History',
+                              color: Colors.orange,
+                            ),
+                            const SizedBox(height: 10),
+
                             if (activeMembers.isEmpty)
                               Container(
                                 width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 48),
+                                padding: const EdgeInsets.symmetric(vertical: 32),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
@@ -142,13 +175,13 @@ class _CarryForwardScreenState extends State<CarryForwardScreen> {
                                   ],
                                 ),
                                 child: const Column(children: [
-                                  Icon(Icons.check_circle_outline, color: AppTheme.success, size: 48),
-                                  SizedBox(height: 12),
-                                  Text('No outstanding debts',
-                                      style: TextStyle(color: AppTheme.success, fontSize: 16, fontWeight: FontWeight.w600)),
-                                  SizedBox(height: 6),
-                                  Text('All members are up to date',
-                                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                                  Icon(Icons.check_circle_outline, color: AppTheme.success, size: 36),
+                                  SizedBox(height: 8),
+                                  Text('No carry-forward debts',
+                                      style: TextStyle(color: AppTheme.success, fontSize: 14, fontWeight: FontWeight.w600)),
+                                  SizedBox(height: 4),
+                                  Text('No debt rolled over from previous months',
+                                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                                 ]),
                               )
                             else
@@ -170,6 +203,271 @@ class _CarryForwardScreenState extends State<CarryForwardScreen> {
 }
 
 // ─── Member Debt Card ─────────────────────────────────────────────────────────
+
+// ─── Section Header ───────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  const _SectionHeader({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Container(
+        width: 28, height: 28,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color, size: 15),
+      ),
+      const SizedBox(width: 8),
+      Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+    ]);
+  }
+}
+
+// ─── Current Month Member Card ────────────────────────────────────────────────
+
+class _CurrentMonthMemberCard extends StatefulWidget {
+  final Map<String, dynamic> data;
+  final String sym;
+  final Future<void> Function() onRefresh;
+  const _CurrentMonthMemberCard({required this.data, required this.sym, required this.onRefresh});
+
+  @override
+  State<_CurrentMonthMemberCard> createState() => _CurrentMonthMemberCardState();
+}
+
+class _CurrentMonthMemberCardState extends State<_CurrentMonthMemberCard> {
+  void _showPaySheet() {
+    final data = widget.data;
+    final sym = widget.sym;
+    final memberIdRaw = data['_id'];
+    final memberId = memberIdRaw is Map ? (memberIdRaw['\$oid'] ?? memberIdRaw.toString()) : (memberIdRaw?.toString() ?? '');
+    final totalDue = (data['totalDue'] ?? data['balance'] ?? 0.0) as num;
+    final partialPaid = (data['partialPaid'] ?? 0.0) as num;
+    final carry = (data['carryForward'] ?? 0.0) as num;
+    final isEditing = partialPaid > 0;
+    final ctrl = TextEditingController(text: isEditing ? partialPaid.toStringAsFixed(0) : '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        bool loading = false;
+        bool clearLoading = false;
+        return StatefulBuilder(builder: (ctx, setS) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.payments_outlined, color: Colors.purple, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(isEditing ? 'Edit Payment' : 'Record Payment',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text((data['name'] ?? '') as String,
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                    ]),
+                  ),
+                  if (isEditing)
+                    IconButton(
+                      icon: clearLoading
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.error))
+                          : const Icon(Icons.delete_outline, color: AppTheme.error),
+                      tooltip: 'Remove payment',
+                      onPressed: clearLoading || loading ? null : () async {
+                        setS(() => clearLoading = true);
+                        final ok = await context.read<RoomProvider>().clearPartialPay(memberId);
+                        setS(() => clearLoading = false);
+                        if (context.mounted) Navigator.pop(ctx);
+                        await widget.onRefresh();
+                        if (context.mounted) showSnack(context, ok ? 'Payment removed' : 'Failed', error: !ok);
+                      },
+                    ),
+                ]),
+                const SizedBox(height: 16),
+                Row(children: [
+                  _InfoPill(label: 'Total Due', value: '$sym${totalDue.toStringAsFixed(0)}', color: AppTheme.error),
+                  if (partialPaid > 0) ...[
+                    const SizedBox(width: 8),
+                    _InfoPill(label: 'Recorded', value: '$sym${partialPaid.toStringAsFixed(0)}', color: AppTheme.success),
+                  ],
+                  if (carry > 0) ...[
+                    const SizedBox(width: 8),
+                    _InfoPill(label: 'Carry', value: '$sym${carry.toStringAsFixed(0)}', color: Colors.orange),
+                  ],
+                ]),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: ctrl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: isEditing ? 'Update amount received' : 'Amount received',
+                    prefixIcon: const Icon(Icons.payments_outlined),
+                    hintText: '$sym${totalDue.toStringAsFixed(0)}',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                LoadingButton(
+                  loading: loading,
+                  onPressed: () async {
+                    final amt = double.tryParse(ctrl.text.trim());
+                    if (amt == null || amt <= 0) return;
+                    setS(() => loading = true);
+                    if (isEditing) await context.read<RoomProvider>().clearPartialPay(memberId);
+                    final ok = await context.read<RoomProvider>().partialPay(memberId, amt);
+                    setS(() => loading = false);
+                    if (context.mounted) Navigator.pop(ctx);
+                    await widget.onRefresh();
+                    if (context.mounted) {
+                      showSnack(context, ok ? (isEditing ? 'Payment updated!' : 'Payment recorded!') : 'Failed', error: !ok);
+                    }
+                  },
+                  label: isEditing ? 'Update Payment' : 'Record Payment',
+                ),
+                if (isEditing) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: clearLoading || loading ? null : () async {
+                        setS(() => clearLoading = true);
+                        final ok = await context.read<RoomProvider>().clearPartialPay(memberId);
+                        setS(() => clearLoading = false);
+                        if (context.mounted) Navigator.pop(ctx);
+                        await widget.onRefresh();
+                        if (context.mounted) showSnack(context, ok ? 'Payment reset' : 'Failed', error: !ok);
+                      },
+                      icon: clearLoading
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.error))
+                          : const Icon(Icons.refresh, size: 16, color: AppTheme.error),
+                      label: const Text('Reset Payment', style: TextStyle(color: AppTheme.error)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.error),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = widget.data;
+    final sym = widget.sym;
+    final name = (data['name'] ?? '') as String;
+    final totalDue = (data['totalDue'] ?? data['balance'] ?? 0.0) as num;
+    final partialPaid = (data['partialPaid'] ?? 0.0) as num;
+    final status = (data['status'] ?? '') as String;
+    final remaining = totalDue - partialPaid;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
+          border: Border.all(color: AppTheme.error.withOpacity(0.15)),
+        ),
+        child: Column(
+          children: [
+            Row(children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppTheme.error.withOpacity(0.1),
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(color: AppTheme.error, fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppTheme.textPrimary)),
+                  Text(
+                    partialPaid > 0
+                        ? '$sym${partialPaid.toStringAsFixed(0)} paid · $sym${remaining.toStringAsFixed(0)} left'
+                        : 'Owes $sym${totalDue.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: partialPaid > 0 ? Colors.purple : AppTheme.error,
+                      fontSize: 12, fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ]),
+              ),
+              GestureDetector(
+                onTap: _showPaySheet,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: partialPaid > 0 ? Colors.purple.withOpacity(0.1) : AppTheme.error.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: partialPaid > 0 ? Colors.purple.withOpacity(0.3) : AppTheme.error.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(
+                      partialPaid > 0 ? Icons.edit_outlined : Icons.payments_outlined,
+                      size: 14,
+                      color: partialPaid > 0 ? Colors.purple : AppTheme.error,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      partialPaid > 0 ? 'Edit' : 'Pay',
+                      style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600,
+                        color: partialPaid > 0 ? Colors.purple : AppTheme.error,
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ]),
+            if (partialPaid > 0) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: (partialPaid / totalDue).clamp(0.0, 1.0).toDouble(),
+                  backgroundColor: Colors.purple.withOpacity(0.1),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.purple),
+                  minHeight: 5,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 class _MemberDebtCard extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -284,6 +582,31 @@ class _MemberDebtCardState extends State<_MemberDebtCard> {
                   },
                   label: isEditing ? 'Update Payment' : 'Record Payment',
                 ),
+                if (isEditing) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: clearLoading || loading ? null : () async {
+                        setS(() => clearLoading = true);
+                        final ok = await context.read<RoomProvider>().clearPartialPay(memberId);
+                        setS(() => clearLoading = false);
+                        if (context.mounted) Navigator.pop(ctx);
+                        await widget.onRefresh();
+                        if (context.mounted) showSnack(context, ok ? 'Payment reset' : 'Failed', error: !ok);
+                      },
+                      icon: clearLoading
+                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.error))
+                          : const Icon(Icons.refresh, size: 16, color: AppTheme.error),
+                      label: const Text('Reset Payment', style: TextStyle(color: AppTheme.error)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppTheme.error),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           );
